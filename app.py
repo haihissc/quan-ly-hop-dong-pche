@@ -91,9 +91,54 @@ def get_config():
         }
         save_json_file(CONFIG_FILE, cfg)
     return cfg
+# ==============================================================================
+# DANH SÁCH TÀI KHOẢN MẶC ĐỊNH HỆ THỐNG
+# ==============================================================================
+DEFAULT_USERS = [
+    {
+        "username": "admin",
+        "password": "admin123",
+        "full_name": "Quản trị viên Hệ thống",
+        "role": "Admin",
+        "department": "Ban Giám đốc",
+        "email": "admin@congty.com.vn",
+        "status": "active"
+    },
+    {
+        "username": "giamdoc",
+        "password": "123456",
+        "full_name": "Trần Quang Thắng (Giám đốc)",
+        "role": "Ban Giám đốc",
+        "department": "Ban Giám đốc",
+        "email": "thang.tq@congty.com.vn",
+        "status": "active"
+    },
+    {
+        "username": "phapche01",
+        "password": "pc123",
+        "full_name": "Nguyễn Văn Luật",
+        "role": "Chuyên viên Pháp chế",
+        "department": "Phòng Pháp chế",
+        "email": "luat.nv@congty.com.vn",
+        "status": "active"
+    },
+    {
+        "username": "kinhdoanh01",
+        "password": "kd123",
+        "full_name": "Lê Hoàng Nam",
+        "role": "Phòng ban đề nghị",
+        "department": "Phòng Kinh doanh & Tiếp thị",
+        "email": "nam.lh@congty.com.vn",
+        "status": "active"
+    }
+]
 
 def get_users():
-    return load_json_file(USERS_FILE, [])
+    users = load_json_file(USERS_FILE, DEFAULT_USERS)
+    if not users:
+        users = DEFAULT_USERS
+        save_users(users)
+    return users
 
 def save_users(data):
     return save_json_file(USERS_FILE, data)
@@ -141,141 +186,78 @@ def display_branding():
         """,
         unsafe_allow_html=True
     )
-# ==============================================================================
-# DANH SÁCH TÀI KHOẢN MẶC ĐỊNH HỆ THỐNG
-# ==============================================================================
-DEFAULT_USERS = [
-    {
-        "username": "admin",
-        "password": "admin123",
-        "full_name": "Quản trị viên Hệ thống",
-        "role": "Admin",
-        "department": "Ban Giám đốc",
-        "email": "admin@congty.com.vn",
-        "status": "active"
-    },
-    {
-        "username": "giamdoc01",
-        "password": "gd123",
-        "full_name": "Trần Quang Thắng (Giám đốc)",
-        "role": "Ban Giám đốc",
-        "department": "Ban Giám đốc",
-        "email": "thang.tq@congty.com.vn",
-        "status": "active"
-    },
-    {
-        "username": "phapche01",
-        "password": "pc123",
-        "full_name": "Nguyễn Văn Luật",
-        "role": "Chuyên viên Pháp chế",
-        "department": "Phòng Pháp chế",
-        "email": "luat.nv@congty.com.vn",
-        "status": "active"
-    },
-    {
-        "username": "kinhdoanh01",
-        "password": "kd123",
-        "full_name": "Lê Hoàng Nam",
-        "role": "Phòng ban đề nghị",
-        "department": "Phòng Kinh doanh & Tiếp thị",
-        "email": "nam.lh@congty.com.vn",
-        "status": "active"
-    }
-]
 
-def get_users(): 
-    users = read_json_file(USERS_FILE, DEFAULT_USERS)
-    if not users:  # Nếu file rỗng []
-        users = DEFAULT_USERS
-        save_users(users)
-    return users
 # ==============================================================================
 # 4. LIST TÀI KHOẢN
 # ==============================================================================
 def render_login_screen():
-    col_left, col_center, col_right = st.columns([1, 1.8, 1])
-    with col_center:
-        st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+    display_branding()
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 42px;">🏢</span>
-                <h2 style="color: #1E3A8A; margin-top: 8px; margin-bottom: 4px;">HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG</h2>
-                <p style="color: #64748B; font-size: 0.92rem;">Cổng đăng nhập an toàn dành cho cán bộ nhân viên nội bộ</p>
+            <div style="background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; color:#1E293B; text-align: center;">🔐 ĐĂNG NHẬP HỆ THỐNG PHÁP CHẾ</h3>
+                <p style="text-align: center; color: #64748B; font-size: 0.88rem;">Vui lòng nhập tài khoản hoặc chọn nhanh tài khoản mẫu</p>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        user_list = get_users()
-        user_options = ["-- Chọn tài khoản mẫu đăng nhập nhanh --"] + [
-            f"{u['username']} - {u['full_name']} ({u['role']})" for u in user_list
-        ]
-        selected_sample = st.selectbox("Chọn nhanh tài khoản thử nghiệm:", user_options)
+        users = get_users()
+        user_opts = ["-- Tự nhập tài khoản --"] + [f"{u['username']} - {u['full_name']} ({u['role']})" for u in users]
+        chosen_sample = st.selectbox("Chọn tài khoản mẫu nhanh:", user_opts)
 
         default_user = ""
         default_pwd = ""
-        if selected_sample != "-- Chọn tài khoản mẫu đăng nhập nhanh --":
-            u_name = selected_sample.split(" - ")[0]
-            default_user = u_name
-            matched = next((u for u in user_list if u["username"] == u_name), None)
-            if matched:
-                default_pwd = matched.get("password", "")
+        if chosen_sample != "-- Tự nhập tài khoản --":
+            u_code = chosen_sample.split(" - ")[0]
+            default_user = u_code
+            for u in users:
+                if u["username"] == u_code:
+                    default_pwd = u.get("password", "")
+                    break
 
-        with st.form("form_dang_nhap", clear_on_submit=False):
-            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / giamdoc01 / phapche01")
-            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / gd123 / pc123")
-            submit_login = st.form_submit_button("Đăng nhập hệ thống", use_container_width=True)
+        username = st.text_input("Tên đăng nhập:", value=default_user, placeholder="admin / giamdoc / phapche01")
+        password = st.text_input("Mật khẩu:", type="password", value=default_pwd, placeholder="admin123 / 123456 / pc123")
 
-            if submit_login:
-                u_input = username_val.strip()
-                p_input = password_val.strip()
+        if st.button("Đăng Nhập Ngay 🚀", type="primary", use_container_width=True):
+            u_input = username.strip()
+            p_input = password.strip()
 
-                # Kiểm tra tài khoản đối chiếu
-                matched_account = next(
-                    (u for u in user_list if u.get("username") == u_input and u.get("password") == p_input), 
-                    None
-                )
+            matched_user = None
+            for u in users:
+                if u["username"] == u_input and u.get("password") == p_input:
+                    matched_user = u
+                    break
 
-                # Fallback bảo đảm đặc quyền Admin và Ban Giám đốc luôn vào được
-                if not matched_account:
-                    if u_input == "admin" and p_input == "admin123":
-                        matched_account = {
-                            "username": "admin",
-                            "full_name": "Quản trị viên Hệ thống",
-                            "role": "Admin",
-                            "department": "Ban Giám đốc",
-                            "email": "admin@congty.com.vn"
-                        }
-                    elif u_input in ["giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
-                        matched_account = {
-                            "username": "giamdoc01",
-                            "full_name": "Trần Quang Thắng",
-                            "role": "Ban Giám đốc",
-                            "department": "Ban Giám đốc",
-                            "email": "thang.tq@congty.com.vn"
-                        }
+            # Cơ chế dự phòng đặc quyền đảm bảo Admin và Giám Đốc luôn vào được
+            if not matched_user:
+                if u_input == "admin" and p_input == "admin123":
+                    matched_user = {
+                        "username": "admin",
+                        "full_name": "Quản trị viên Hệ thống",
+                        "role": "Admin",
+                        "department": "Ban Giám đốc",
+                        "email": "admin@congty.com.vn"
+                    }
+                elif u_input == "giamdoc" and p_input in ["123456", "gd123"]:
+                    matched_user = {
+                        "username": "giamdoc",
+                        "full_name": "Trần Quang Thắng (Giám đốc)",
+                        "role": "Ban Giám đốc",
+                        "department": "Ban Giám đốc",
+                        "email": "thang.tq@congty.com.vn"
+                    }
 
-                if matched_account:
-                    st.session_state["logged_in"] = True
-                    st.session_state["user"] = matched_account
-                    st.success(f"Đăng nhập thành công! Chào mừng {matched_account.get('full_name')}.")
-                    st.rerun()
-                else:
-                    st.error("Tên đăng nhập hoặc mật khẩu không chính xác! Vui lòng thử 'admin' / 'admin123'.")
-
-        st.markdown(
-            """
-            <div style="margin-top: 20px; padding: 14px 16px; background-color: #F1F5F9; border-radius: 10px; border-left: 4px solid #3B82F6; font-size: 0.85rem; color: #334155;">
-                <strong>Danh sách tài khoản dùng thử hệ thống:</strong><br/>
-                • <b>Quản trị viên (Admin):</b> <code>admin</code> / <code>admin123</code><br/>
-                • <b>Ban Giám đốc:</b> <code>giamdoc01</code> / <code>gd123</code><br/>
-                • <b>Chuyên viên Pháp chế:</b> <code>phapche01</code> / <code>pc123</code><br/>
-                • <b>Phòng ban đề xuất:</b> <code>kinhdoanh01</code> / <code>kd123</code>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+            if matched_user:
+                st.session_state["logged_in"] = True
+                st.session_state["user"] = matched_user
+                st.success(f"Xin chào, {matched_user['full_name']} ({matched_user['role']})!")
+                st.rerun()
+            else:
+                st.error("Tên đăng nhập hoặc mật khẩu không chính xác. Thử 'admin' / 'admin123' hoặc 'giamdoc' / '123456'.")
 
 
 # ==============================================================================
