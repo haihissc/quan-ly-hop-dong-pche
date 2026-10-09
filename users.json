@@ -1,0 +1,38 @@
+[
+  {
+    "username": "admin",
+    "password": "admin123",
+    "full_name": "Quản trị viên Hệ thống",
+    "role": "Admin",
+    "department": "Ban Giám đốc",
+    "email": "admin@congty.com.vn",
+    "status": "active"
+  },
+  {
+    "username": "giamdoc01",
+    "password": "gd123",
+    "full_name": "Trần Quang Thắng",
+    "role": "Ban Giám đốc",
+    "department": "Ban Giám đốc",
+    "email": "thang.tq@congty.com.vn",
+    "status": "active"
+  },
+  {
+    "username": "phapche01",
+    "password": "pc123",
+    "full_name": "Nguyễn Văn Luật",
+    "role": "Chuyên viên Pháp chế",
+    "department": "Phòng Pháp chế",
+    "email": "luat.nv@congty.com.vn",
+    "status": "active"
+  },
+  {
+    "username": "kinhdoanh01",
+    "password": "kd123",
+    "full_name": "Lê Hoàng Nam",
+    "role": "Phòng ban đề nghị",
+    "department": "Phòng Kinh doanh & Tiếp thị",
+    "email": "nam.lh@congty.com.vn",
+    "status": "active"
+  }
+]
