@@ -1,0 +1,32 @@
+[
+  {
+    "id": "DEPT_BGĐ",
+    "name": "Ban Giám đốc",
+    "manager": "Quản trị viên Hệ thống",
+    "email": "bod@asiaholdings.vn"
+  },
+  {
+    "id": "DEPT_PC",
+    "name": "Phòng Pháp chế",
+    "manager": "Nguyễn Văn Luật",
+    "email": "legal@asiaholdings.vn"
+  },
+  {
+    "id": "DEPT_KT",
+    "name": "Phòng Kế toán - Tài chính",
+    "manager": "Trần Thị Thu",
+    "email": "finance@asiaholdings.vn"
+  },
+  {
+    "id": "DEPT_KD",
+    "name": "Phòng Kinh doanh & Tiếp thị",
+    "manager": "Lê Hoàng Nam",
+    "email": "sales@asiaholdings.vn"
+  },
+  {
+    "id": "DEPT_NS",
+    "name": "Phòng Nhân sự - Hành chính",
+    "manager": "Phạm Hồng Hạnh",
+    "email": "hr@asiaholdings.vn"
+  }
+]
