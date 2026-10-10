@@ -1,0 +1,17 @@
+{
+  "company_name": "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN",
+  "short_name": "CNS",
+  "company_address": "58-60 Nguyễn Tất Thành, Phường Xóm Chiếu, TP.Hồ Chí Minh",
+  "company_phone": "0000",
+  "company_email": "cns@cns.com.vn",
+  "system_version": "2.0.0",
+  "logo_base64": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMUU0MEFGIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjM0I4MkY2Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSIyMiIgZmlsbD0idXJsKCNnKSIvPjxwYXRoIGQ9Ik0zMCAyNmgyNmwxNiAxNnYzNGMwIDMuMy0yLjcgNi02IDZIMzBjLTMuMyAwLTYtMi43LTYtNlYzMmMwLTMuMyAyLjctNiA2LTZ6IiBmaWxsPSIjRkZGRkZGIi8+PHBhdGggZD0iTTU2IDI2djE2aDE2IiBmaWxsPSIjOTNDNUZEIi8+PHBhdGggZD0iTTM2IDQ4aDI4TTM2IDU4aDI4TTM2IDY4aDE4IiBzdHJva2U9IiMxRTQwQUYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+",
+  "smtp_settings": {
+    "server": "smtp.gmail.com",
+    "port": 587,
+    "sender_email": "pche.cns@cns.com.vn",
+    "app_password": "",
+    "use_tls": true
+  },
+  "gemini_api_key": ""
+}
