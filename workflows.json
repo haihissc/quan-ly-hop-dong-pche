@@ -1,0 +1,79 @@
+[
+  {
+    "id": "WF_STANDARD",
+    "name": "Quy trình Thẩm định Hợp đồng Chuẩn",
+    "contract_type": "Hợp đồng Thương mại & Dịch vụ",
+    "description": "Áp dụng cho các hợp đồng thương mại, dịch vụ tiêu chuẩn",
+    "checklist": [
+      "Dự thảo Hợp đồng chi tiết",
+      "Giấy chứng nhận Đăng ký kinh doanh đối tác",
+      "Bảng báo giá & Thỏa thuận mức dịch vụ (SLA)",
+      "Tờ trình đề xuất ký kết hợp đồng",
+      "Tài liệu khác"
+    ],
+    "steps": [
+      {
+        "step_order": 1,
+        "name": "Soạn thảo & Đề xuất",
+        "role_required": "Chuyên viên",
+        "department": "Phòng Kinh doanh & Tiếp thị"
+      },
+      {
+        "step_order": 2,
+        "name": "Thẩm định Pháp lý & Điều khoản",
+        "role_required": "Chuyên viên Pháp chế",
+        "department": "Phòng Pháp chế"
+      },
+      {
+        "step_order": 3,
+        "name": "Thẩm định Tài chính & Ngân sách",
+        "role_required": "Kế toán trưởng",
+        "department": "Phòng Kế toán - Tài chính"
+      },
+      {
+        "step_order": 4,
+        "name": "Phê duyệt Cuối cùng",
+        "role_required": "Admin",
+        "department": "Ban Giám đốc"
+      },
+      {
+        "step_order": 5,
+        "name": "Ký kết & Lưu trữ Số",
+        "role_required": "Văn thư Pháp chế",
+        "department": "Phòng Pháp chế"
+      }
+    ]
+  },
+  {
+    "id": "WF_FAST",
+    "name": "Quy trình Rút gọn (Dưới 50 triệu)",
+    "contract_type": "Hợp đồng Mua sắm Thiết bị & Văn phòng phẩm",
+    "description": "Áp dụng cho hợp đồng mua sắm nhỏ và văn phòng phẩm",
+    "checklist": [
+      "Báo giá chính thức từ nhà cung cấp",
+      "Biên bản đề xuất mua sắm",
+      "Dự thảo hợp đồng rút gọn",
+      "Tài liệu khác"
+    ],
+    "steps": [
+      {
+        "step_order": 1,
+        "name": "Soạn thảo & Đề xuất",
+        "role_required": "Chuyên viên",
+        "department": "Phòng Kinh doanh & Tiếp thị"
+      },
+      {
+        "step_order": 2,
+        "name": "Kế toán Duyệt chi",
+        "role_required": "Kế toán trưởng",
+        "department": "Phòng Kế toán - Tài chính"
+      },
+      {
+        "step_order": 3,
+        "name": "Ký kết Hoàn tất",
+        "role_required": "Admin",
+        "department": "Ban Giám đốc"
+      }
+    ]
+  }
+]
