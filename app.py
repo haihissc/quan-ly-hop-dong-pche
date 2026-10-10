@@ -1,19 +1,3 @@
-"""
-HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - BƯỚC 1, 2, 3 & 4 HOÀN CHỈNH
-Tác giả: Senior Python Developer
-Bổ sung Bước 4:
-- Hàm legal_staff_view() chi tiết, KHÔNG dùng placeholder:
-  Tab 1: Đang rà soát
-    - Chỉ hiện hồ sơ có status == 'Đang rà soát' VÀ assigned_to == current_username.
-    - Chia đôi màn hình st.columns([1, 1]).
-    - Cột trái: Chọn file PDF trong hồ sơ, render trực tiếp bằng thẻ <iframe> base64.
-    - Cột phải: Hiển thị Checklist. Dưới mỗi mục có st.radio (Đạt / Không đạt / Có góp ý). Nếu 'Có góp ý' thì hiện st.text_area.
-    - Tích hợp AI: Expander nhập API Key Gemini và nội dung điều khoản. Gọi AI đánh giá rủi ro pháp lý (dùng try-except).
-    - Chọn Đánh giá tổng quát và nhấn nút 'Trình Giám đốc duyệt'. Đổi trạng thái thành 'Chờ Giám đốc duyệt'.
-  Tab 2: Lịch sử rà soát
-    - Hiện các hồ sơ nhân viên này đã làm xong. Chỉ cho xem lại ý kiến, không cho sửa.
-"""
-
 import os
 import json
 import base64
@@ -28,101 +12,66 @@ import google.generativeai as genai
 import streamlit as st
 
 # ==============================================================================
-# 1. CẤU HÌNH GIAO DIỆN STREAMLIT
+# 1. CẤU HÌNH TRANG & CSS GIAO DIỆN CHUẨN DOANH NGHIỆP
 # ==============================================================================
 st.set_page_config(
-    page_title="Hệ thống Quản trị Hợp đồng",
-    page_icon="📜",
+    page_title="Hệ Thống Quản Lý & Thẩm Định Hợp Đồng - Phòng Pháp Chế",
+    page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ==============================================================================
-# 2. HÀM ÉP GIAO DIỆN LIGHT MODE & HIỆN ĐẠI (APPLY_CUSTOM_CSS)
-# ==============================================================================
-def apply_custom_css():
-    custom_css = """
-    <style>
-        html, body, [data-testid="stAppViewContainer"], .main {
-            background-color: #F8FAFC !important;
-            color: #0F172A !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #FFFFFF !important;
-            border-right: 1px solid #E2E8F0 !important;
-        }
-        [data-testid="stSidebar"] * {
-            color: #1E293B !important;
-        }
-        div[data-testid="stVerticalBlock"] > div[style*="background-color"],
-        div.stMetric, .css-card, .stDataFrame, div[data-testid="stExpander"] {
-            background-color: #FFFFFF !important;
-            border: 1px solid #E2E8F0 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
-            padding: 16px !important;
-        }
-        div.stMetric {
-            padding: 18px 20px !important;
-            border-radius: 14px !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%) !important;
-            border: 1px solid #E2E8F0 !important;
-        }
-        .stButton > button {
-            background-color: #2563EB !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 10px !important;
-            padding: 10px 24px !important;
-            font-weight: 600 !important;
-            font-size: 0.95rem !important;
-            transition: all 0.2s ease-in-out !important;
-            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
-        }
-        .stButton > button:hover {
-            background-color: #1D4ED8 !important;
-        }
-        .stTextInput > div > div > input,
-        .stSelectbox > div > div > div,
-        .stTextArea > div > div > textarea,
-        .stNumberInput > div > div > input {
-            background-color: #FFFFFF !important;
-            color: #0F172A !important;
-            border: 1.5px solid #CBD5E1 !important;
-            border-radius: 10px !important;
-            padding: 10px 14px !important;
-        }
-        [data-testid="stFileUploader"] {
-            background-color: #F8FAFC !important;
-            border: 1.5px dashed #CBD5E1 !important;
-            border-radius: 12px !important;
-            padding: 12px !important;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px !important;
-            background-color: #E2E8F0 !important;
-            padding: 6px !important;
-            border-radius: 12px !important;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 8px !important;
-            padding: 8px 18px !important;
-            color: #475569 !important;
-            font-weight: 600 !important;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #FFFFFF !important;
-            color: #2563EB !important;
-        }
-    </style>
+# Tối ưu hóa UI giao diện doanh nghiệp
+st.markdown(
     """
-    st.markdown(custom_css, unsafe_allow_html=True)
-
-apply_custom_css()
+    <style>
+    .main .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .stDownloadButton>button {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    iframe {
+        border-radius: 8px;
+        border: 1px solid #CBD5E1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ==============================================================================
-# 3. QUẢN LÝ DỮ LIỆU JSON
+# 2. KHỞI TẠO SESSION STATE TOÀN CỤC
+# ==============================================================================
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
+if "role" not in st.session_state:
+    st.session_state["role"] = None
+
+# ==============================================================================
+# 3. ĐỊNH NGHĨA FILE JSON & CÁC HÀM TIỆN ÍCH DỮ LIỆU
 # ==============================================================================
 USERS_FILE = "users.json"
 CONFIG_FILE = "config.json"
@@ -162,6 +111,7 @@ def write_json_file(file_path: str, data) -> bool:
         st.error(f"Lỗi khi ghi dữ liệu vào '{file_path}': {error}")
         return False
 
+# BỘ DỮ LIỆU DỰ PHÒNG CHUẨN XÁC ĐẢM BẢO KHÔNG BAO GIỜ BỊ KEY ERROR
 DEFAULT_USERS = [
     {
         "username": "admin",
@@ -177,7 +127,7 @@ DEFAULT_USERS = [
         "username": "giamdoc",
         "password": "123456",
         "full_name": "Trần Quang Thắng (Giám đốc)",
-        "role": "Ban Giám đốc",
+        "role": "Giám đốc Pháp chế",
         "department": "Ban Giám đốc",
         "email": "thang.tq@congty.com.vn",
         "zalo": "0912345678",
@@ -187,7 +137,7 @@ DEFAULT_USERS = [
         "username": "giamdoc01",
         "password": "gd123",
         "full_name": "Trần Quang Thắng",
-        "role": "Ban Giám đốc",
+        "role": "Giám đốc Pháp chế",
         "department": "Ban Giám đốc",
         "email": "thang.tq@congty.com.vn",
         "zalo": "0912345678",
@@ -197,10 +147,20 @@ DEFAULT_USERS = [
         "username": "phapche01",
         "password": "pc123",
         "full_name": "Nguyễn Văn Luật",
-        "role": "Giám đốc Pháp chế",
+        "role": "Nhân viên Pháp chế",
         "department": "Phòng Pháp chế",
         "email": "luat.nv@congty.com.vn",
         "zalo": "0987654321",
+        "status": "active"
+    },
+    {
+        "username": "phapche02",
+        "password": "pc456",
+        "full_name": "Lê Thị Mai",
+        "role": "Nhân viên Pháp chế",
+        "department": "Phòng Pháp chế",
+        "email": "mai.lt@congty.com.vn",
+        "zalo": "0988776655",
         "status": "active"
     },
     {
@@ -215,7 +175,60 @@ DEFAULT_USERS = [
     }
 ]
 
-# Tương thích cả hai tên hàm load_json_file và read_json_file
+DEFAULT_DEPARTMENTS = [
+    {"id": "DEPT_BGD", "name": "Ban Giám đốc", "manager": "Quản trị viên Hệ thống", "email": "bod@asiaholdings.vn"},
+    {"id": "DEPT_PC", "name": "Phòng Pháp chế", "manager": "Nguyễn Văn Luật", "email": "legal@asiaholdings.vn"},
+    {"id": "DEPT_KT", "name": "Phòng Kế toán - Tài chính", "manager": "Trần Thị Thu", "email": "finance@asiaholdings.vn"},
+    {"id": "DEPT_KD", "name": "Phòng Kinh doanh & Tiếp thị", "manager": "Lê Hoàng Nam", "email": "sales@asiaholdings.vn"},
+    {"id": "DEPT_NS", "name": "Phòng Nhân sự - Hành chính", "manager": "Phạm Hồng Hạnh", "email": "hr@asiaholdings.vn"}
+]
+
+DEFAULT_WORKFLOWS = [
+    {
+        "id": "WF_COMMERCIAL",
+        "name": "Hợp đồng Thương mại & Dịch vụ",
+        "contract_type": "Hợp đồng Thương mại & Dịch vụ",
+        "description": "Áp dụng cho các hợp đồng mua bán hàng hóa, cung ứng dịch vụ thương mại, hợp tác kinh doanh.",
+        "checklist": [
+            "Dự thảo Hợp đồng chi tiết",
+            "Giấy chứng nhận ĐKKD của đối tác",
+            "Báo giá chính thức & Thỏa thuận thương mại",
+            "Tài liệu khác"
+        ]
+    },
+    {
+        "id": "WF_LABOR",
+        "name": "Hợp đồng Lao động & Đào tạo",
+        "contract_type": "Hợp đồng Lao động & Đào tạo",
+        "description": "Áp dụng cho tuyển dụng nhân sự chính thức, hợp đồng đào tạo nghiệp vụ và cam kết bảo mật.",
+        "checklist": [
+            "Dự thảo Hợp đồng lao động",
+            "Sơ yếu lý lịch & Bằng cấp chuyên môn",
+            "Thỏa thuận bảo mật thông tin (NDA)",
+            "Tài liệu khác"
+        ]
+    }
+]
+
+DEFAULT_CONFIG = {
+    "company_name": "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU",
+    "short_name": "ASIA HOLDINGS",
+    "company_address": "Tầng 18, Tòa nhà Landmark 72, Đường Phạm Hùng, Q. Nam Từ Liêm, Hà Nội",
+    "company_phone": "(024) 3788 9999",
+    "company_email": "phapche@asiaholdings.vn",
+    "system_version": "2.5.0 (Bước 8.1)",
+    "logo_base64": DEFAULT_LOGO_SVG_B64,
+    "smtp_settings": {
+        "server": "smtp.gmail.com",
+        "port": 587,
+        "sender_email": "phapche.asiaholdings@gmail.com",
+        "app_password": "",
+        "use_tls": True
+    },
+    "gemini_api_key": ""
+}
+
+# Tương thích đồng thời 2 quy chuẩn hàm load_json_file và read_json_file
 load_json_file = read_json_file
 save_json_file = write_json_file
 
@@ -227,15 +240,38 @@ def get_users():
     return users
 
 def save_users(data): return write_json_file(USERS_FILE, data)
-def get_config(): return read_json_file(CONFIG_FILE, {})
-def save_config(data): return write_json_file(CONFIG_FILE, data)
-def get_workflows(): return read_json_file(WORKFLOWS_FILE, [])
-def save_workflows(data): return write_json_file(WORKFLOWS_FILE, data)
-def get_departments(): return read_json_file(DEPARTMENTS_FILE, [])
-def save_departments(data): return write_json_file(DEPARTMENTS_FILE, data)
-def get_contracts(): return read_json_file(CONTRACTS_FILE, [])
-def save_contracts(data): return write_json_file(CONTRACTS_FILE, data)
 
+def get_config():
+    cfg = read_json_file(CONFIG_FILE, DEFAULT_CONFIG)
+    if not cfg:
+        cfg = DEFAULT_CONFIG
+        save_config(cfg)
+    return cfg
+
+def save_config(data): return write_json_file(CONFIG_FILE, data)
+
+def get_workflows():
+    wfs = read_json_file(WORKFLOWS_FILE, DEFAULT_WORKFLOWS)
+    if not wfs:
+        wfs = DEFAULT_WORKFLOWS
+        save_workflows(wfs)
+    return wfs
+
+def save_workflows(data): return write_json_file(WORKFLOWS_FILE, data)
+
+def get_departments():
+    depts = read_json_file(DEPARTMENTS_FILE, DEFAULT_DEPARTMENTS)
+    if not depts:
+        depts = DEFAULT_DEPARTMENTS
+        save_departments(depts)
+    return depts
+
+def save_departments(data): return write_json_file(DEPARTMENTS_FILE, data)
+
+def get_contracts():
+    return read_json_file(CONTRACTS_FILE, [])
+
+def save_contracts(data): return write_json_file(CONTRACTS_FILE, data)
 
 # ==============================================================================
 # 4. HÀM HIỂN THỊ THƯƠNG HIỆU & LOGO BASE64
@@ -245,27 +281,28 @@ def display_branding():
     company_name = system_config.get("company_name", "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU")
     short_name = system_config.get("short_name", "ASIA HOLDINGS")
     logo_b64 = system_config.get("logo_base64", DEFAULT_LOGO_SVG_B64).strip()
-    system_version = system_config.get("system_version", "1.0.0")
+    system_version = system_config.get("system_version", "2.5.0")
 
     if logo_b64.startswith("data:image"):
-        image_src = logo_b64
+        clean_b64 = logo_b64
+    elif logo_b64.startswith("<svg") or "<svg" in logo_b64:
+        encoded_svg = base64.b64encode(logo_b64.encode("utf-8")).decode("utf-8")
+        clean_b64 = f"data:image/svg+xml;base64,{encoded_svg}"
     else:
-        try:
-            sample_header = base64.b64decode(logo_b64[:64]).decode("utf-8", errors="ignore")
-            image_src = f"data:image/svg+xml;base64,{logo_b64}" if ("<svg" in sample_header or "xml" in sample_header) else f"data:image/png;base64,{logo_b64}"
-        except Exception:
-            image_src = f"data:image/svg+xml;base64,{logo_b64}"
+        clean_b64 = f"data:image/png;base64,{logo_b64}"
 
-    st.sidebar.markdown(
+    st.markdown(
         f"""
-        <div style="text-align: center; padding: 10px 4px 18px 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 16px;">
-            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 8px;">
-                <img src="{image_src}" alt="Logo Công ty" style="height: 56px; width: 56px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.06);" />
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #3B82F6 100%); border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <img src="{clean_b64}" style="width: 54px; height: 54px; border-radius: 10px; background: white; padding: 4px; object-fit: contain; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="Logo"/>
+                <div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; text-transform: uppercase;">{company_name}</div>
+                    <div style="font-size: 0.85rem; color: #BFDBFE; font-weight: 500;">HỆ THỐNG QUẢN LÝ VÀ THẨM ĐỊNH PHÁP CHẾ HỢP ĐỒNG DOANH NGHIỆP • {short_name}</div>
+                </div>
             </div>
-            <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
-            <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; line-height: 1.3; margin-top: 3px;">{company_name}</div>
-            <div style="display: inline-block; margin-top: 8px; font-size: 0.70rem; padding: 2px 10px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
-                QUẢN TRỊ HỢP ĐỒNG v{system_version}
+            <div style="text-align: right;">
+                <span style="background: rgba(255, 255, 255, 0.2); color: #FFFFFF; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">Phiên bản {system_version}</span>
             </div>
         </div>
         """,
@@ -273,41 +310,48 @@ def display_branding():
     )
 
 # ==============================================================================
-# 5. LOGIC XÁC THỰC & ĐĂNG NHẬP
+# 5. MÀN HÌNH ĐĂNG NHẬP & XÁC THỰC
 # ==============================================================================
 def render_login_screen():
+    display_branding()
+
     col_left, col_center, col_right = st.columns([1, 1.8, 1])
     with col_center:
-        st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 42px;">🏢</span>
-                <h2 style="color: #1E3A8A; margin-top: 8px; margin-bottom: 4px;">HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG</h2>
-                <p style="color: #64748B; font-size: 0.92rem;">Cổng đăng nhập an toàn dành cho cán bộ nhân viên nội bộ</p>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #1E3A8A; font-weight: 800; margin-bottom: 6px;">🔐 Đăng Nhập Cổng Pháp Chế</h2>
+                <p style="color: #64748B; font-size: 0.9rem;">Vui lòng nhập tài khoản được cấp hoặc chọn tài khoản dùng thử bên dưới</p>
             </div>
             """,
             unsafe_allow_html=True
         )
 
         user_list = get_users()
-        user_options = ["-- Chọn tài khoản mẫu đăng nhập nhanh --"] + [
-            f"{u['username']} - {u['full_name']} ({u['role']})" for u in user_list
+        user_display_opts = ["-- Chọn tài khoản mẫu đăng nhập nhanh --"] + [
+            f"{u.get('username')} - {u.get('full_name')} ({u.get('role')})" for u in user_list
         ]
-        selected_sample = st.selectbox("Chọn nhanh tài khoản thử nghiệm:", user_options)
+
+        selected_sample = st.selectbox(
+            "⚡ Chọn nhanh tài khoản kiểm thử:",
+            user_display_opts,
+            index=0,
+            key="quick_select_user"
+        )
 
         default_user = ""
         default_pwd = ""
         if selected_sample != "-- Chọn tài khoản mẫu đăng nhập nhanh --":
             u_name = selected_sample.split(" - ")[0]
             default_user = u_name
-            matched = next((u for u in user_list if u["username"] == u_name), None)
+            matched = next((u for u in user_list if u.get("username") == u_name), None)
             if matched:
                 default_pwd = matched.get("password", "")
 
         with st.form("form_dang_nhap", clear_on_submit=False):
-            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / giamdoc / giamdoc01 / phapche01")
-            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / 123456 / gd123 / pc123")
+            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / giamdoc / phapche01")
+            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / 123456 / pc123")
             submit_login = st.form_submit_button("Đăng nhập hệ thống", use_container_width=True)
 
             if submit_login:
@@ -325,28 +369,32 @@ def render_login_screen():
                             "full_name": "Quản trị viên Hệ thống",
                             "role": "Admin",
                             "department": "Ban Giám đốc",
-                            "email": "admin@congty.com.vn"
+                            "email": "admin@congty.com.vn",
+                            "zalo": "0901234567"
                         }
                     elif u_input in ["giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
                         matched_account = {
                             "username": "giamdoc01",
                             "full_name": "Trần Quang Thắng",
-                            "role": "Ban Giám đốc",
+                            "role": "Giám đốc Pháp chế",
                             "department": "Ban Giám đốc",
-                            "email": "thang.tq@congty.com.vn"
+                            "email": "thang.tq@congty.com.vn",
+                            "zalo": "0912345678"
                         }
                     elif u_input == "phapche01" and p_input == "pc123":
                         matched_account = {
                             "username": "phapche01",
                             "full_name": "Nguyễn Văn Luật",
-                            "role": "Chuyên viên Pháp chế",
+                            "role": "Nhân viên Pháp chế",
                             "department": "Phòng Pháp chế",
-                            "email": "luat.nv@congty.com.vn"
+                            "email": "luat.nv@congty.com.vn",
+                            "zalo": "0987654321"
                         }
 
                 if matched_account:
                     st.session_state["logged_in"] = True
                     st.session_state["user"] = matched_account
+                    st.session_state["role"] = matched_account.get("role", "Phòng ban đề nghị")
                     st.success(f"Đăng nhập thành công! Chào mừng {matched_account.get('full_name')}.")
                     st.rerun()
                 else:
@@ -357,8 +405,8 @@ def render_login_screen():
             <div style="margin-top: 20px; padding: 14px 16px; background-color: #F1F5F9; border-radius: 10px; border-left: 4px solid #3B82F6; font-size: 0.85rem; color: #334155;">
                 <strong>Danh sách tài khoản dùng thử hệ thống:</strong><br/>
                 • <b>Quản trị viên (Admin):</b> <code>admin</code> / <code>admin123</code><br/>
-                • <b>Ban Giám đốc:</b> <code>giamdoc</code> (<code>123456</code>) hoặc <code>giamdoc01</code> (<code>gd123</code>)<br/>
-                • <b>Chuyên viên Pháp chế:</b> <code>phapche01</code> / <code>pc123</code><br/>
+                • <b>Giám đốc Pháp chế:</b> <code>giamdoc</code> (<code>123456</code>) hoặc <code>giamdoc01</code> (<code>gd123</code>)<br/>
+                • <b>Nhân viên Pháp chế:</b> <code>phapche01</code> / <code>pc123</code><br/>
                 • <b>Phòng ban đề xuất:</b> <code>kinhdoanh01</code> / <code>kd123</code>
             </div>
             """,
@@ -368,45 +416,57 @@ def render_login_screen():
 def logout_user():
     st.session_state["logged_in"] = False
     st.session_state["user"] = None
+    st.session_state["role"] = None
     st.rerun()
 
-
 # ==============================================================================
-# 6. BƯỚC 2: HÀM ADMIN_VIEW()
+# 6. BƯỚC 2: HÀM ADMIN_VIEW() - NÂNG CẤP BƯỚC 8.1 SỬA USERNAME & PHÂN QUYỀN
 # ==============================================================================
 def admin_view():
     st.title("⚙️ Bảng Điều Khiển Quản Trị Hệ Thống (Admin Panel)")
-    tab_depts, tab_users, tab_sys_config = st.tabs(["🏢 Quản lý Phòng ban", "👥 Quản lý Người dùng", "🌐 Cấu hình Hệ thống"])
+    tab_depts, tab_users, tab_sys_config = st.tabs([
+        "🏢 Quản Lý Phòng Ban",
+        "👥 Quản Lý Người Dùng & Phân Quyền",
+        "🌐 Cấu Hình Nhận Diện Doanh Nghiệp"
+    ])
 
     with tab_depts:
-        st.subheader("🏢 Quản Lý Danh Sách Phòng Ban")
+        st.subheader("🏢 Danh Sách & Thiết Lập Phòng Ban Doanh Nghiệp")
         departments = get_departments()
-        if departments: st.dataframe(pd.DataFrame(departments), use_container_width=True)
+        if departments:
+            df_depts = pd.DataFrame(departments)
+            st.dataframe(df_depts, use_container_width=True)
+        else:
+            st.info("Chưa có danh mục phòng ban nào trong departments.json!")
+
         col_add, col_edit, col_del = st.columns(3)
         with col_add:
-            with st.form("form_add_dept", clear_on_submit=True):
-                new_d_name = st.text_input("Tên phòng ban mới *")
-                new_d_mgr = st.text_input("Trưởng bộ phận")
-                new_d_mail = st.text_input("Email")
-                if st.form_submit_button("Thêm phòng ban", use_container_width=True):
+            with st.form("form_add_dept"):
+                st.markdown("##### ➕ Thêm Phòng Ban")
+                new_d_name = st.text_input("Tên phòng ban *")
+                new_d_id = st.text_input("Mã phòng ban (VD: DEPT_KD)")
+                new_d_mgr = st.text_input("Trưởng phòng phụ trách")
+                new_d_mail = st.text_input("Email đầu mối")
+                if st.form_submit_button("Lưu Phòng Ban Mới", use_container_width=True):
                     if new_d_name.strip():
-                        dept_code = "DEPT_" + str(len(departments) + 1).zfill(2)
-                        departments.append({"id": dept_code, "name": new_d_name.strip(), "manager": new_d_mgr.strip() if new_d_mgr else "Chưa phân công", "email": new_d_mail.strip()})
+                        new_id = new_d_id.strip() if new_d_id.strip() else f"DEPT_{len(departments)+1}"
+                        departments.append({"id": new_id, "name": new_d_name.strip(), "manager": new_d_mgr.strip(), "email": new_d_mail.strip()})
                         save_departments(departments)
                         st.success("Thêm thành công!")
                         st.rerun()
 
         with col_edit:
             if departments:
-                d_names = [d["name"] for d in departments]
-                sel_edit_name = st.selectbox("Chọn phòng ban sửa:", d_names)
-                target_d = next((d for d in departments if d["name"] == sel_edit_name), None)
-                if target_d:
-                    with st.form("form_edit_dept"):
-                        e_name = st.text_input("Tên mới:", value=target_d.get("name", ""))
-                        e_mgr = st.text_input("Trưởng bộ phận:", value=target_d.get("manager", ""))
-                        e_mail = st.text_input("Email:", value=target_d.get("email", ""))
-                        if st.form_submit_button("Lưu thay đổi", use_container_width=True):
+                with st.form("form_edit_dept"):
+                    st.markdown("##### ✏️ Chỉnh Sửa Phòng Ban")
+                    d_opts = [d["name"] for d in departments]
+                    sel_d = st.selectbox("Chọn phòng ban:", d_opts)
+                    target_d = next((d for d in departments if d["name"] == sel_d), None)
+                    e_name = st.text_input("Tên mới:", value=target_d.get("name", "") if target_d else "")
+                    e_mgr = st.text_input("Trưởng phòng:", value=target_d.get("manager", "") if target_d else "")
+                    e_mail = st.text_input("Email:", value=target_d.get("email", "") if target_d else "")
+                    if st.form_submit_button("Cập Nhật", use_container_width=True):
+                        if target_d and e_name.strip():
                             target_d["name"], target_d["manager"], target_d["email"] = e_name.strip(), e_mgr.strip(), e_mail.strip()
                             save_departments(departments)
                             st.success("Cập nhật thành công!")
@@ -449,7 +509,7 @@ def admin_view():
 
         st.markdown("---")
 
-        # 2. TABS TẠO MỚI HOẶC CHỈNH SỬA TÀI KHOẢN
+        # 2. TABS TẠO MỚI HOẶC CHỈNH SỬA TÀI KHOẢN (BƯỚC 8.1 SỬA ĐƯỢC USERNAME)
         sub_tab_add, sub_tab_edit, sub_tab_del = st.tabs(["➕ Tạo Tài Khoản Mới", "✏️ Chỉnh Sửa Nhân Sự", "🗑️ Xóa Tài Khoản"])
 
         with sub_tab_add:
@@ -483,20 +543,18 @@ def admin_view():
                         "Vai trò (Role) được gán tự động:",
                         value=assigned_role,
                         disabled=True,
-                        help="Đối với các phòng ban chuyên môn khác, vai trò mặc định là 'Phòng ban đề nghị'.",
                         key="add_u_auto_role"
                     )
 
-            if st.button("Lưu & Tạo Tài Khoản Nhân Sự 🚀", type="primary", use_container_width=True, key="btn_save_new_user"):
-                # Bắt lỗi cẩn thận đầy đủ các trường
+            if st.button("Tạo Tài Khoản Mới 🚀", type="primary", use_container_width=True, key="btn_create_user"):
                 if not u_name.strip():
-                    st.error("❌ Vui lòng nhập Tên đăng nhập (Username)!")
+                    st.error("❌ Tên đăng nhập không được để trống!")
                 elif any(u.get("username") == u_name.strip() for u in all_users):
-                    st.error(f"❌ Tên đăng nhập '{u_name.strip()}' đã tồn tại trong hệ thống. Vui lòng chọn tên khác!")
+                    st.error(f"❌ Tên đăng nhập '{u_name.strip()}' đã tồn tại trong hệ thống!")
                 elif not u_pass.strip():
-                    st.error("❌ Vui lòng nhập Mật khẩu (Password)!")
+                    st.error("❌ Mật khẩu không được để trống!")
                 elif not u_fullname.strip():
-                    st.error("❌ Vui lòng nhập Họ và tên nhân sự phụ trách!")
+                    st.error("❌ Họ và tên không được để trống!")
                 elif not u_mail.strip() or "@" not in u_mail:
                     st.error("❌ Vui lòng nhập Email hợp lệ!")
                 elif not u_zalo.strip():
@@ -520,7 +578,7 @@ def admin_view():
                         st.rerun()
 
         with sub_tab_edit:
-            st.markdown("##### ✏️ Chỉnh Sửa Thông Tin & Phân Quyền Tài Khoản")
+            st.markdown("##### ✏️ Chỉnh Sửa Thông Tin & Phân Quyền Tài Khoản (Cho phép đổi Username)")
             if all_users:
                 user_select_labels = [f"{u.get('username')} - {u.get('full_name')} ({u.get('department')})" for u in all_users]
                 selected_user_label = st.selectbox("Chọn tài khoản cần cập nhật:", user_select_labels, key="sel_user_to_edit")
@@ -530,7 +588,11 @@ def admin_view():
                 if target_user:
                     col_ed1, col_ed2 = st.columns(2)
                     with col_ed1:
-                        ed_uname = st.text_input("Tên đăng nhập (Username):", value=target_user.get("username", ""), disabled=True)
+                        ed_uname = st.text_input(
+                            "Tên đăng nhập (Username) * (Admin có thể sửa):",
+                            value=target_user.get("username", ""),
+                            key=f"ed_uname_{target_user['username']}"
+                        )
                         ed_pass = st.text_input("Mật khẩu mới (Bỏ trống nếu giữ nguyên):", type="password", key=f"ed_pass_{target_user['username']}")
                         ed_fullname = st.text_input("Họ và tên nhân sự phụ trách *", value=target_user.get("full_name", ""), key=f"ed_fn_{target_user['username']}")
                     with col_ed2:
@@ -551,24 +613,62 @@ def admin_view():
                             st.text_input("Vai trò (Role) được gán tự động:", value=ed_role, disabled=True, key=f"ed_auto_role_{target_user['username']}")
 
                     if st.button("Lưu Cập Nhật Người Dùng 💾", type="primary", use_container_width=True, key=f"btn_edit_{target_user['username']}"):
-                        if not ed_fullname.strip() or not ed_mail.strip() or not ed_zalo.strip():
-                            st.error("Vui lòng điền đủ Họ tên, Email và Số điện thoại Zalo!")
+                        old_uname = target_user.get("username", "").strip()
+                        new_uname = ed_uname.strip()
+
+                        if not new_uname:
+                            st.error("❌ Tên đăng nhập không được để trống!")
+                        elif not ed_fullname.strip() or not ed_mail.strip() or not ed_zalo.strip():
+                            st.error("❌ Vui lòng điền đủ Họ tên, Email và Số điện thoại Zalo!")
+                        elif new_uname != old_uname and any(u.get("username", "").strip().lower() == new_uname.lower() for u in all_users if u.get("username", "").strip() != old_uname):
+                            st.error(f"❌ Tên đăng nhập '{new_uname}' đã tồn tại! Vui lòng chọn Tên đăng nhập khác.")
                         else:
-                            target_user["full_name"] = ed_fullname.strip()
-                            target_user["email"] = ed_mail.strip()
-                            target_user["zalo"] = ed_zalo.strip()
-                            target_user["department"] = ed_dept
-                            target_user["role"] = ed_role
-                            if ed_pass.strip():
-                                target_user["password"] = ed_pass.strip()
-                            if save_users(all_users):
-                                st.success(f"Đã cập nhật thành công thông tin nhân sự '{ed_fullname}'!")
+                            updated_user = {
+                                "username": new_uname,
+                                "password": ed_pass.strip() if ed_pass.strip() else target_user.get("password", "123456"),
+                                "full_name": ed_fullname.strip(),
+                                "email": ed_mail.strip(),
+                                "zalo": ed_zalo.strip(),
+                                "department": ed_dept,
+                                "role": ed_role,
+                                "status": target_user.get("status", "active")
+                            }
+
+                            # Loại bỏ bản ghi cũ và thêm bản ghi mới để không bị trùng lặp
+                            updated_user_list = [u for u in all_users if u.get("username", "").strip() != old_uname]
+                            updated_user_list.append(updated_user)
+
+                            # Đồng bộ các hợp đồng liên quan nếu đổi Tên đăng nhập
+                            if new_uname != old_uname:
+                                all_contracts = get_contracts()
+                                contracts_synced = False
+                                for c in all_contracts:
+                                    if c.get("created_by") == old_uname:
+                                        c["created_by"] = new_uname
+                                        contracts_synced = True
+                                    if c.get("assigned_to") == old_uname:
+                                        c["assigned_to"] = new_uname
+                                        contracts_synced = True
+                                if contracts_synced:
+                                    save_contracts(all_contracts)
+
+                            # Cập nhật session_state nếu chính tài khoản này đang đăng nhập
+                            if st.session_state.get("user", {}).get("username") == old_uname:
+                                st.session_state["user"] = updated_user
+                                st.session_state["role"] = ed_role
+
+                            if save_users(updated_user_list):
+                                if new_uname != old_uname:
+                                    st.success(f"🎉 Đã đổi Tên đăng nhập từ '{old_uname}' ➔ '{new_uname}' và cập nhật thông tin thành công!")
+                                else:
+                                    st.success(f"🎉 Đã cập nhật thành công thông tin nhân sự '{ed_fullname}'!")
                                 st.rerun()
 
         with sub_tab_del:
             st.markdown("##### 🗑️ Xóa Tài Khoản Nhân Sự")
             if all_users:
-                del_opts = [f"{u.get('username')} - {u.get('full_name')} [{u.get('role')}]" for u in all_users if u.get("username") != "admin"]
+                current_login_uname = st.session_state.get("user", {}).get("username", "admin")
+                del_opts = [f"{u.get('username')} - {u.get('full_name')} [{u.get('role')}]" for u in all_users if u.get("username") != current_login_uname]
                 if del_opts:
                     del_choice = st.selectbox("Chọn tài khoản cần xóa khỏi hệ thống:", del_opts, key="sel_user_del")
                     confirm_del_user = st.checkbox("Tôi xác nhận muốn xóa tài khoản nhân sự này vĩnh viễn.", key="chk_confirm_del_u")
@@ -582,7 +682,7 @@ def admin_view():
                         else:
                             st.warning("Vui lòng tích vào ô xác nhận trước khi xóa.")
                 else:
-                    st.info("Chỉ còn tài khoản Quản trị viên 'admin', không thể xóa.")
+                    st.info("Không thể xóa chính tài khoản bạn đang đăng nhập.")
 
     with tab_sys_config:
         st.subheader("🌐 Cấu Hình Nhận Diện Doanh Nghiệp & Email Gửi Đi")
@@ -610,7 +710,6 @@ def admin_view():
             save_config(cfg)
             st.success("Đã lưu cấu hình vào config.json thành công!")
             st.rerun()
-
 
 # ==============================================================================
 # 7. BƯỚC 2: HÀM WORKFLOW_CONFIG_VIEW()
@@ -678,9 +777,9 @@ def workflow_config_view():
                     st.rerun()
 
 # ==============================================================================
-# 8. BƯỚC 3: HÀM DEPARTMENT_VIEW()
+# 8. BƯỚC 3: HÀM DEPARTMENT_VIEW() - HỖ TRỢ ĐIỀU HƯỚNG TRÌNH / THEO DÕI HỒ SƠ
 # ==============================================================================
-def department_view():
+def department_view(active_tab: str = None):
     current_user = st.session_state.get("user", {})
     current_username = current_user.get("username", "khach")
     current_fullname = current_user.get("full_name", "Cán bộ đề xuất")
@@ -689,7 +788,10 @@ def department_view():
     st.title("📑 Cổng Nộp & Quản Lý Hồ Sơ Hợp Đồng")
     st.markdown(f"Đơn vị đề xuất: **{current_department}** | Cán bộ phụ trách: **{current_fullname}** (`@{current_username}`)")
 
-    tab_my_contracts, tab_submit_contract = st.tabs(["📂 Hồ Sơ Hợp Đồng Đã Gửi", "📤 Nộp Hồ Sơ Hợp Đồng Mới"])
+    if active_tab == "submit":
+        tab_submit_contract, tab_my_contracts = st.tabs(["📤 Nộp Hồ Sơ Hợp Đồng Mới", "📂 Hồ Sơ Hợp Đồng Đã Gửi"])
+    else:
+        tab_my_contracts, tab_submit_contract = st.tabs(["📂 Hồ Sơ Hợp Đồng Đã Gửi", "📤 Nộp Hồ Sơ Hợp Đồng Mới"])
 
     with tab_my_contracts:
         st.subheader("📂 Danh Sách Hồ Sơ Đã Gửi Của Đơn Vị")
@@ -770,7 +872,7 @@ def department_view():
                     "value_vnd": int(contract_value),
                     "created_by": current_username,
                     "department": current_department,
-                    "workflow_id": matched_wf.get("id", "WF_DEFAULT"),
+                    "workflow_id": matched_wf.get("id"),
                     "current_step": 1,
                     "status": "Chờ Giám đốc phân công",
                     "effective_date": str(eff_date),
@@ -781,13 +883,13 @@ def department_view():
                 }
                 all_contracts.append(new_contract_record)
                 save_contracts(all_contracts)
-                st.success(f"Nộp hồ sơ '{contract_code}: {contract_title}' thành công! Trạng thái: 'Chờ Giám đốc phân công'.")
+                st.success(f"Nộp hồ sơ thành công! Mã hồ sơ của bạn là: {contract_code}")
                 st.rerun()
 
 # ==============================================================================
 # 9. BƯỚC 4: HÀM LEGAL_STAFF_VIEW() - PHÁP CHẾ RÀ SOÁT & TÍCH HỢP AI GEMINI
 # ==============================================================================
-def legal_staff_view():
+def legal_staff_view(active_tab: str = None):
     """
     Giao diện Chuyên viên Pháp chế Rà soát (Legal Staff View):
     Hàm gồm 2 Tab:
@@ -813,10 +915,7 @@ def legal_staff_view():
     all_users = get_users()
     legal_users = [u for u in all_users if u.get("department") == "Phòng Pháp chế" or "Pháp chế" in u.get("role", "")]
 
-    # ==========================================================================
-    # CƠ CHẾ XÁC ĐỊNH CHUYÊN VIÊN / PHẠM VI XEM HỒ SƠ THÔNG MINH
-    # ==========================================================================
-    # Nếu là Admin hoặc Ban Giám đốc: cho phép giám sát bàn làm việc của mọi chuyên viên
+    # Cơ chế xác định chuyên viên / phạm vi xem hồ sơ thông minh
     is_admin_or_director = current_role in ["Admin", "Ban Giám đốc", "Giám đốc Pháp chế"]
     
     target_username = current_username
@@ -858,25 +957,28 @@ def legal_staff_view():
             f"Bộ phận: **Phòng Pháp chế**"
         )
 
-    tab_reviewing, tab_history = st.tabs([
-        "🔍 Đang rà soát",
-        "📜 Lịch sử rà soát"
-    ])
+    if active_tab == "history":
+        tab_history, tab_reviewing = st.tabs([
+            "📜 Lịch sử rà soát",
+            "🔍 Đang rà soát"
+        ])
+    else:
+        tab_reviewing, tab_history = st.tabs([
+            "🔍 Đang rà soát",
+            "📜 Lịch sử rà soát"
+        ])
 
     # ==========================================================================
     # TAB 1: ĐANG RÀ SOÁT
     # ==========================================================================
     with tab_reviewing:
-        # LỌC HỒ SƠ CHUẨN XÁC:
         if view_scope_all:
             active_contracts = [c for c in all_contracts if c.get("status") == "Đang rà soát"]
         else:
-            # Lọc theo chuyên viên mục tiêu
             active_contracts = [
                 c for c in all_contracts
                 if c.get("status") == "Đang rà soát" and c.get("assigned_to") == target_username
             ]
-            # Nếu chuyên viên này chưa có hồ sơ và người dùng muốn xem các hồ sơ đang rà soát khác
             if not active_contracts and not is_admin_or_director:
                 all_reviewing = [c for c in all_contracts if c.get("status") == "Đang rà soát"]
                 if all_reviewing:
@@ -888,21 +990,18 @@ def legal_staff_view():
                         active_contracts = all_reviewing
 
         if not active_contracts:
-            st.info(
-                f"Hiện tại không có hồ sơ nào ở trạng thái **'Đang rà soát'** phù hợp với bộ lọc hiện tại."
-            )
+            st.info("Hiện tại không có hồ sơ nào ở trạng thái **'Đang rà soát'** phù hợp với bộ lọc hiện tại.")
             st.markdown(
                 """
                 <div style="margin-top: 10px; padding: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 0.85rem; color: #475569;">
                     💡 <b>Gợi ý kiểm tra:</b><br/>
-                    • Vào <b>👑 Quản trị Giám đốc (director_view) -> Tab 2: Phân công hồ sơ</b> để giao việc cho chuyên viên.<br/>
-                    • Đăng nhập tài khoản <code>phapche01</code> (Mật khẩu: <code>pc123</code>) hoặc <code>phapche02</code> (Mật khẩu: <code>pc456</code>) để thao tác trực tiếp.
+                    • Đăng nhập tài khoản Giám đốc (<code>giamdoc01</code> / <code>gd123</code>) để phân công hồ sơ.<br/>
+                    • Đăng nhập tài khoản <code>phapche01</code> (Mật khẩu: <code>pc123</code>) để thao tác trực tiếp.
                 </div>
                 """,
                 unsafe_allow_html=True
             )
         else:
-            # CHỌN HỒ SƠ BẰNG ID ĐẢM BẢO MIỄN NHIỄM VỚI LỖI INDEXERROR
             contract_ids = [c.get("id") for c in active_contracts]
             contract_map = {c.get("id"): c for c in active_contracts}
 
@@ -924,12 +1023,10 @@ def legal_staff_view():
                 )
 
             st.markdown("---")
-
-            # CHIA ĐÔI MÀN HÌNH st.columns([1, 1])
             col_left, col_right = st.columns([1, 1])
 
             # ------------------------------------------------------------------
-            # CỘT TRÁI: CHỌN FILE PDF & RENDER TRỰC TIẾP QUA THẺ <iframe> BASE64
+            # CỘT TRÁI: XEM FILE PDF TRỰC TIẾP
             # ------------------------------------------------------------------
             with col_left:
                 st.markdown("#### 📄 Xem Trực Tiếp Tài Liệu Hồ Sơ (PDF)")
@@ -945,52 +1042,43 @@ def legal_staff_view():
                         format_func=lambda i: f"{i+1}. [{attachments[i].get('checklist_item', 'Tài liệu')}]: {attachments[i].get('file_name', 'document.pdf')}",
                         key=f"att_sel_{selected_contract.get('id')}"
                     )
-                    # Bảo vệ an toàn chống IndexError
                     if selected_att_idx >= len(attachments):
                         selected_att_idx = 0
-                    chosen_att = attachments[selected_att_idx]
-                    pdf_b64 = chosen_att.get("file_base64", "").strip()
 
-                    if pdf_b64:
-                        # 1. CHUẨN HÓA CHUỖI BASE64: LOẠI BỎ TIỀN TỐ TRÙNG LẶP, KHOẢNG TRẮNG, KÝ TỰ XUỐNG DÒNG
-                        raw_b64 = pdf_b64
-                        if "base64," in raw_b64:
-                            raw_b64 = raw_b64.split("base64,", 1)[1]
-                        raw_b64 = "".join(raw_b64.split())  # Xóa sạch whitespace, \n, \r
-                        missing_padding = len(raw_b64) % 4
-                        if missing_padding:
-                            raw_b64 += "=" * (4 - missing_padding)
+                    chosen_attachment = attachments[selected_att_idx]
+                    base64_content = chosen_attachment.get("file_base64", "").strip()
 
-                        pdf_data_uri = f"data:application/pdf;base64,{raw_b64}"
+                    if base64_content:
+                        clean_base64 = base64_content
+                        if "base64," in clean_base64:
+                            clean_base64 = clean_base64.split("base64,", 1)[1]
+                        clean_base64 = "".join(clean_base64.split())
 
-                        # 2. GIẢI MÃ NHỊ PHÂN AN TOÀN ĐỂ XÁC MINH VÀ HỖ TRỢ TẢI XUỐNG
+                        data_uri = f"data:application/pdf;base64,{clean_base64}"
+                        f_name = chosen_attachment.get('file_name', 'tai_lieu.pdf')
+
                         try:
-                            pdf_bytes = base64.b64decode(raw_b64)
+                            file_bytes = base64.b64decode(clean_base64)
+                            file_size_kb = len(file_bytes) / 1024
                         except Exception:
-                            pdf_bytes = None
-
-                        # 3. RENDER PDF ĐA TẦNG: <object> + <embed> + <iframe> ĐẢM BẢO TƯƠNG THÍCH MỌI TRÌNH DUYỆT
-                        file_display_name = chosen_att.get('file_name', 'document.pdf')
-                        file_kb = chosen_att.get('file_size', len(pdf_bytes) if pdf_bytes else 0) / 1024
+                            file_bytes = None
+                            file_size_kb = chosen_attachment.get("file_size", 0) / 1024
 
                         st.markdown(
                             f"""
-                            <div style="border-radius: 12px; overflow: hidden; border: 1.5px solid #CBD5E1; box-shadow: 0 4px 10px rgba(0,0,0,0.06); background-color: #FFFFFF; margin-bottom: 10px;">
-                                <div style="background-color: #F8FAFC; padding: 10px 14px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="border-radius: 10px; overflow: hidden; border: 1px solid #CBD5E1; background: #FFFFFF; margin-top: 8px; margin-bottom: 8px;">
+                                <div style="background-color: #F8FAFC; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">
-                                        📎 Đang hiển thị: {file_display_name} ({file_kb:.1f} KB)
+                                        📄 {f_name} ({file_size_kb:.1f} KB) - Mục: [{chosen_attachment.get('checklist_item')}]
                                     </span>
-                                    <a href="{pdf_data_uri}" target="_blank" download="{file_display_name}" 
-                                       style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 4px 10px; border-radius: 6px; border: 1px solid #BFDBFE;">
-                                        ↗️ Mở trong tab mới / Tải tệp
-                                    </a>
+                                    <a href="{data_uri}" target="_blank" download="{f_name}" style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 3px 8px; border-radius: 4px; border: 1px solid #BFDBFE;">↗️ Tải / Mở tệp</a>
                                 </div>
-                                <object data="{pdf_data_uri}#toolbar=1&navpanes=0" type="application/pdf" width="100%" height="650px" style="border: none; display: block;">
-                                    <embed src="{pdf_data_uri}#toolbar=1&navpanes=0" type="application/pdf" width="100%" height="650px" />
-                                    <iframe src="{pdf_data_uri}" width="100%" height="650px" style="border: none;">
-                                        <div style="padding: 24px; text-align: center; color: #64748B; font-size: 0.9rem;">
-                                            Trình duyệt đang chặn xem trực tiếp PDF qua data URI.<br/>
-                                            Vui lòng nhấn nút tải xuống bên dưới để xem tệp đầy đủ.
+                                <object data="{data_uri}#toolbar=1" type="application/pdf" width="100%" height="520px" style="border: none; display: block;">
+                                    <embed src="{data_uri}#toolbar=1" type="application/pdf" width="100%" height="520px" />
+                                    <iframe src="{data_uri}" width="100%" height="520px" style="border: none;">
+                                        <div style="padding: 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
+                                            Tệp PDF tiếng Việt sẵn sàng.<br/>
+                                            <a href="{data_uri}" download="{f_name}" style="color: #2563EB; font-weight: bold;">Nhấp vào đây để tải tệp PDF về máy</a>
                                         </div>
                                     </iframe>
                                 </object>
@@ -999,625 +1087,403 @@ def legal_staff_view():
                             unsafe_allow_html=True
                         )
 
-                        # 4. NÚT DOWNLOAD DỰ PHÒNG CHUẨN NATIVE STREAMLIT
-                        if pdf_bytes:
+                        if file_bytes:
                             st.download_button(
-                                label=f"📥 Tải xuống tệp PDF '{file_display_name}'",
-                                data=pdf_bytes,
-                                file_name=file_display_name,
+                                label=f"📥 Tải tệp '{f_name}' về máy kiểm tra",
+                                data=file_bytes,
+                                file_name=f_name,
                                 mime="application/pdf",
                                 key=f"btn_dl_pdf_{selected_contract.get('id')}_{selected_att_idx}",
                                 use_container_width=True
                             )
                     else:
-                        st.error("Tệp này không có dữ liệu chuỗi Base64 hợp lệ.")
+                        st.info("Tệp đính kèm không có dữ liệu nội dung base64.")
 
             # ------------------------------------------------------------------
-            # CỘT PHẢI: CHECKLIST (RADIO: ĐẠT/KHÔNG ĐẠT/CÓ GÓP Ý), TÍCH HỢP AI, TRÌNH DUYỆT
+            # CỘT PHẢI: CHECKLIST, TRỢ LÝ AI GEMINI & TRÌNH GIÁM ĐỐC
             # ------------------------------------------------------------------
             with col_right:
-                st.markdown("#### ⚖️ Thẩm Định Checklist & Đánh Giá Pháp Lý")
-
-                # Lấy danh mục checklist tương ứng với Loại hợp đồng
-                workflows = get_workflows()
-                matched_wf = next(
-                    (w for w in workflows if w.get("id") == selected_contract.get("workflow_id") or w.get("contract_type") == selected_contract.get("contract_type")),
-                    None
-                )
-                contract_checklist = matched_wf.get("checklist", []) if matched_wf else [
-                    "Dự thảo Hợp đồng chi tiết",
-                    "Giấy chứng nhận Đăng ký kinh doanh đối tác",
-                    "Báo giá chính thức & Thỏa thuận thương mại",
-                    "Tài liệu khác"
-                ]
+                st.markdown("#### ⚖️ Thẩm Định Hồ Sơ & Đánh Giá Checklist")
+                all_workflows = get_workflows()
+                wf_match = next((w for w in all_workflows if w.get("id") == selected_contract.get("workflow_id")), None)
+                req_checklist = wf_match.get("checklist", []) if wf_match else ["Dự thảo Hợp đồng chi tiết", "Tài liệu khác"]
 
                 checklist_results = {}
-
-                st.markdown("##### 1. Thẩm tra từng đầu mục Checklist:")
-                for idx, item in enumerate(contract_checklist, 1):
-                    st.markdown(
-                        f"<div style='font-weight: 700; font-size: 0.88rem; color: #1E293B; margin-top: 12px;'>"
-                        f"Mục {idx}: {item}</div>",
-                        unsafe_allow_html=True
-                    )
-
-                    # st.radio (Đạt / Không đạt / Có góp ý)
-                    eval_status = st.radio(
-                        label=f"Đánh giá cho mục '{item}':",
-                        options=["Đạt", "Không đạt", "Có góp ý"],
-                        horizontal=True,
-                        key=f"radio_eval_{selected_contract.get('id')}_{idx}",
-                        label_visibility="collapsed"
-                    )
-
-                    comment_text = ""
-                    # NẾU 'CÓ GÓP Ý' THÌ HIỂN THỊ ST.TEXT_AREA
-                    if eval_status == "Có góp ý":
-                        comment_text = st.text_area(
-                            f"Nội dung góp ý / Chỉnh sửa cho mục '{item}':",
-                            placeholder="Nêu rõ điều khoản cần bổ sung, sửa đổi hoặc tài liệu chưa hợp lệ...",
-                            key=f"comment_{selected_contract.get('id')}_{idx}",
-                            height=80
-                        )
-
-                    checklist_results[item] = {
-                        "status": eval_status,
-                        "comment": comment_text.strip()
-                    }
+                for idx_item, chk_item in enumerate(req_checklist, 1):
+                    with st.container():
+                        st.markdown(f"**{idx_item}. {chk_item}**")
+                        c_radio, c_comm = st.columns([1.2, 1.8])
+                        with c_radio:
+                            status_choice = st.radio(
+                                label=f"Trạng thái đánh giá cho {chk_item}:",
+                                options=["Đạt", "Không đạt", "Có góp ý"],
+                                horizontal=True,
+                                key=f"rad_{selected_contract.get('id')}_{idx_item}",
+                                label_visibility="collapsed"
+                            )
+                        with c_comm:
+                            comment_text = ""
+                            if status_choice == "Có góp ý":
+                                comment_text = st.text_input(
+                                    label=f"Nội dung góp ý cho {chk_item}:",
+                                    placeholder="Ghi rõ nội dung cần điều chỉnh hoặc lưu ý...",
+                                    key=f"txt_{selected_contract.get('id')}_{idx_item}",
+                                    label_visibility="collapsed"
+                                )
+                            elif status_choice == "Không đạt":
+                                comment_text = st.text_input(
+                                    label=f"Lý do không đạt cho {chk_item}:",
+                                    placeholder="Lý do hồ sơ không đạt chuẩn...",
+                                    key=f"txt_fail_{selected_contract.get('id')}_{idx_item}",
+                                    label_visibility="collapsed"
+                                )
+                        checklist_results[chk_item] = {"status": status_choice, "comment": comment_text.strip()}
+                        st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
 
                 st.markdown("---")
 
-                # --------------------------------------------------------------
-                # TÍCH HỢP AI: EXPANDER NHẬP API KEY GEMINI VÀ RÀ SOÁT RỦI RO
-                # --------------------------------------------------------------
-                with st.expander("🤖 Trợ lý AI Gemini - Rà soát Rủi ro & Câu chữ Pháp lý", expanded=False):
-                    st.markdown(
-                        "Dán nội dung điều khoản hợp đồng cần kiểm tra (ví dụ: điều khoản phạt vi phạm, "
-                        "chấm dứt, bồi thường thiệt hại, cam kết bảo mật...) để AI phân tích rủi ro."
-                    )
-                    cfg_data = get_config()
-                    gemini_api_key = st.text_input(
-                        "Gemini API Key:",
-                        value=cfg_data.get("gemini_api_key", ""),
-                        type="password",
-                        placeholder="Dán API Key từ Google AI Studio...",
-                        key=f"gemini_key_{selected_contract.get('id')}"
-                    )
-                    clause_content = st.text_area(
-                        "Nội dung điều khoản cần rà soát rủi ro:",
-                        placeholder="Ví dụ: 'Bên A có quyền đơn phương chấm dứt hợp đồng bất kỳ lúc nào mà không cần bồi thường thiệt hại và bên B phải chịu phạt 50% giá trị hợp đồng...'",
-                        height=110,
-                        key=f"clause_text_{selected_contract.get('id')}"
-                    )
+                # TÍCH HỢP TRỢ LÝ AI GEMINI
+                with st.expander("🤖 Trợ lý AI Gemini: Rà Soát Điều Khoản & Rủi Ro Pháp Lý", expanded=False):
+                    st.caption("Sử dụng Google Gemini API để tự động phát hiện rủi ro, lỗ hổng cam kết bồi thường và kiến nghị điều khoản bảo vệ doanh nghiệp.")
+                    default_gemini_key = os.environ.get("GEMINI_API_KEY", "") or get_config().get("gemini_api_key", "")
+                    input_api_key = st.text_input("Gemini API Key:", value=default_gemini_key, type="password", key=f"gemini_k_{selected_contract.get('id')}")
+                    clause_to_review = st.text_area("Nội dung điều khoản cần rà soát rủi ro:", placeholder="Dán nội dung điều khoản hợp đồng cần thẩm định vào đây...", key=f"clause_txt_{selected_contract.get('id')}", height=120)
 
-                    if st.button("🔍 Phân tích Rủi ro bằng AI Gemini", key=f"btn_call_ai_{selected_contract.get('id')}"):
-                        if not gemini_api_key.strip():
-                            st.error("Vui lòng cung cấp Gemini API Key để thực hiện thẩm định!")
-                        elif not clause_content.strip():
-                            st.warning("Vui lòng dán nội dung điều khoản cần rà soát!")
+                    if st.button("🔍 Phân Tích Rủi Ro Bằng AI Gemini", key=f"btn_ai_{selected_contract.get('id')}", use_container_width=True):
+                        if not input_api_key.strip():
+                            st.error("Vui lòng nhập Gemini API Key!")
+                        elif not clause_to_review.strip():
+                            st.warning("Vui lòng dán nội dung điều khoản cần phân tích!")
                         else:
-                            # GỌI AI DÙNG TRY-EXCEPT
-                            try:
-                                with st.spinner("AI đang thẩm định rủi ro pháp lý và phân tích điều khoản..."):
-                                    genai.configure(api_key=gemini_api_key.strip())
+                            with st.spinner("AI Gemini đang phân tích rủi ro và đối chiếu chuẩn pháp lý..."):
+                                try:
+                                    genai.configure(api_key=input_api_key.strip())
                                     ai_model = genai.GenerativeModel("gemini-1.5-flash")
-                                    ai_prompt = f"""
-                                    Bạn là Trưởng ban Pháp chế cao cấp của Tập đoàn. Hãy thẩm tra điều khoản hợp đồng thương mại sau:
-                                    
-                                    NỘI DUNG ĐIỀU KHOẢN:
-                                    \"\"\"{clause_content}\"\"\"
-
-                                    YÊU CẦU ĐÁNH GIÁ:
-                                    1. Mức độ rủi ro pháp lý: Đánh giá rõ (CAO / TRUNG BÌNH / THẤP) và giải thích lý do ngắn gọn.
-                                    2. Điểm bất lợi & bẫy pháp lý: Chỉ ra các cạm bẫy bất lợi cho doanh nghiệp theo quy định của Bộ luật Dân sự và Luật Thương mại Việt Nam.
-                                    3. Đề xuất câu chữ sửa đổi (Redline Clause): Viết lại điều khoản hoàn chỉnh đảm bảo cân bằng quyền lợi và bảo vệ an toàn cho doanh nghiệp.
-                                    """
+                                    ai_prompt = (
+                                        "Bạn là Luật sư cao cấp và Trưởng phòng Pháp chế doanh nghiệp Việt Nam. "
+                                        "Hãy phân tích điều khoản hợp đồng sau: "
+                                        f"\n\n'''{clause_to_review.strip()}'''\n\n"
+                                        "Nêu rõ: 1) Các rủi ro tiềm ẩn cho doanh nghiệp; 2) Lỗ hổng pháp lý/bất lợi thương mại; 3) Kiến nghị phương án sửa đổi chi tiết theo Luật Doanh nghiệp & Thương mại hiện hành."
+                                    )
                                     ai_response = ai_model.generate_content(ai_prompt)
-                                    st.markdown("##### 📊 Báo Cáo Phân Tích Rủi Ro Của AI:")
                                     st.markdown(
-                                        f"<div style='background-color: #F8FAFC; border: 1px solid #CBD5E1; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px; font-size: 0.88rem; line-height: 1.6;'>"
-                                        f"{ai_response.text}</div>",
+                                        f"""
+                                        <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; border-left: 4px solid #10B981; border-radius: 8px; padding: 14px; margin-top: 10px;">
+                                            <div style="font-weight: 700; color: #047857; margin-bottom: 8px;">📊 Báo cáo Rà soát Rủi ro từ AI Gemini:</div>
+                                            <div style="font-size: 0.9rem; color: #1E293B;">{ai_response.text}</div>
+                                        </div>
+                                        """,
                                         unsafe_allow_html=True
                                     )
-                            except Exception as ai_error:
-                                st.error(f"Lỗi khi gọi API Gemini: {ai_error}")
+                                except Exception as gemini_err:
+                                    st.error(f"Lỗi khi gọi API Gemini: {str(gemini_err)}")
 
                 st.markdown("---")
-
-                # --------------------------------------------------------------
-                # ĐÁNH GIÁ TỔNG QUÁT VÀ NÚT 'TRÌNH GIÁM ĐỐC DUYỆT'
-                # --------------------------------------------------------------
-                st.markdown("##### 2. Đánh giá tổng quát & Kết luận:")
-                general_assessment = st.selectbox(
+                gen_assessment = st.selectbox(
                     "Đánh giá tổng quát của Pháp chế: *",
                     [
                         "Đủ điều kiện pháp lý - Đề xuất ký",
                         "Cần điều chỉnh và bổ sung",
                         "Không đủ điều kiện pháp lý"
                     ],
-                    key=f"general_assess_{selected_contract.get('id')}"
+                    key=f"gen_assess_{selected_contract.get('id')}"
                 )
 
-                summary_notes = st.text_area(
-                    "Ý kiến kết luận / Tờ trình gửi Ban Giám đốc: *",
-                    placeholder="Tóm tắt các vấn đề pháp lý trọng yếu, cam kết đã đàm phán và kiến nghị của Pháp chế...",
-                    key=f"summary_notes_{selected_contract.get('id')}",
+                conclusion_notes = st.text_area(
+                    "Ý kiến kết luận & Kiến nghị của Pháp chế: *",
+                    placeholder="Ghi rõ nhận xét tổng quát, các lưu ý cần thực hiện trước khi phát hành...",
+                    key=f"notes_{selected_contract.get('id')}",
                     height=90
                 )
 
-                submit_to_director_btn = st.button(
-                    "📤 Trình Giám đốc duyệt",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"btn_submit_director_{selected_contract.get('id')}"
-                )
-
-                if submit_to_director_btn:
-                    if not summary_notes.strip():
-                        st.error("Vui lòng ghi ý kiến kết luận của Pháp chế trước khi trình duyệt!")
+                if st.button("📤 Hoàn Tất Thẩm Định & Trình Giám Đốc Duyệt", type="primary", use_container_width=True, key=f"btn_submit_dir_{selected_contract.get('id')}"):
+                    if not conclusion_notes.strip():
+                        st.error("Vui lòng nhập Ý kiến kết luận của Pháp chế trước khi trình duyệt!")
                     else:
-                        # CẬP NHẬT TRẠNG THÁI THÀNH 'Chờ Giám đốc duyệt'
                         selected_contract["status"] = "Chờ Giám đốc duyệt"
                         selected_contract["legal_review"] = {
                             "reviewer": current_username,
                             "reviewer_name": current_fullname,
                             "reviewed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "general_assessment": general_assessment,
-                            "summary_notes": summary_notes.strip(),
+                            "general_assessment": gen_assessment,
+                            "summary_notes": conclusion_notes.strip(),
                             "checklist_results": checklist_results
                         }
-
                         if save_contracts(all_contracts):
                             st.success(
-                                f"🎉 Đã hoàn tất rà soát hồ sơ '{selected_contract.get('id')}: {selected_contract.get('title')}' "
-                                f"và chuyển sang trạng thái: **'Chờ Giám đốc duyệt'** thành công!"
+                                f"🎉 Đã hoàn tất thẩm định hồ sơ '{selected_contract.get('id')}'!\n\n"
+                                f"Trạng thái đã được chuyển thành: **'Chờ Giám đốc duyệt'**."
                             )
                             st.rerun()
 
     # ==========================================================================
-    # TAB 2: LỊCH SỬ RÀ SOÁT (CHỈ XEM LẠI, KHÔNG CHO SỬA)
+    # TAB 2: LỊCH SỬ RÀ SOÁT
     # ==========================================================================
     with tab_history:
         st.subheader("📜 Lịch Sử Thẩm Định Của Chuyên Viên")
-        st.markdown(
-            "🔒 **Chế độ chỉ xem (Read-only):** Hiển thị toàn bộ các hồ sơ do chính bạn đã hoàn tất "
-            f"rà soát thẩm định (`@{current_username}`). Bạn chỉ có thể xem lại ý kiến và kết luận, không thể sửa đổi."
-        )
-
-        # LỌC: Các hồ sơ nhân viên này đã làm xong
-        if is_admin_or_director and view_scope_all:
+        if view_scope_all:
             history_contracts = [
                 c for c in all_contracts
-                if c.get("status") != "Đang rà soát" and (c.get("legal_review") or c.get("assigned_to"))
+                if c.get("legal_review") and c.get("status") != "Đang rà soát"
             ]
         else:
             history_contracts = [
                 c for c in all_contracts
-                if (c.get("assigned_to") == target_username or c.get("legal_review", {}).get("reviewer") == target_username)
-                and c.get("status") != "Đang rà soát"
+                if c.get("legal_review") and c.get("legal_review", {}).get("reviewer") == target_username
             ]
 
         if not history_contracts:
             st.info("Chưa có hồ sơ nào trong lịch sử thẩm định của bạn.")
         else:
-            for h_contract in history_contracts:
-                h_id = h_contract.get("id")
-                h_title = h_contract.get("title")
-                h_partner = h_contract.get("partner_name")
-                h_status = h_contract.get("status")
-                h_val = h_contract.get("value_vnd", 0)
-                l_review = h_contract.get("legal_review", {})
-
-                with st.expander(f"📁 {h_id}: {h_title} — Trạng thái hiện tại: [{h_status}]", expanded=False):
-                    col_h1, col_h2 = st.columns([1, 1.2])
-
+            for h_c in history_contracts:
+                l_rev = h_c.get("legal_review", {})
+                with st.expander(f"📁 {h_c.get('id')}: {h_c.get('title')} — Trạng thái: [{h_c.get('status')}]"):
+                    col_h1, col_h2 = st.columns(2)
                     with col_h1:
-                        st.markdown(f"**Đối tác:** {h_partner}")
-                        st.markdown(f"**Giá trị:** {h_val:,.0f} đ")
-                        st.markdown(f"**Loại hợp đồng:** {h_contract.get('contract_type')}")
-                        st.markdown(f"**Phòng ban đề xuất:** {h_contract.get('department')}")
-                        st.markdown(f"**Thời gian rà soát:** {l_review.get('reviewed_at', 'N/A')}")
-                        st.markdown(f"**Chuyên viên thực hiện:** {l_review.get('reviewer_name', current_fullname)}")
-
+                        st.write(f"**Đối tác:** {h_c.get('partner_name')}")
+                        st.write(f"**Phòng ban đề xuất:** {h_c.get('department')}")
+                        st.write(f"**Giá trị:** {h_c.get('value_vnd', 0):,.0f} VNĐ")
                     with col_h2:
-                        st.markdown("**Kết quả thẩm định tổng quát (Chỉ đọc):**")
-                        assess_val = l_review.get("general_assessment", "Chưa có kết luận")
-                        assess_color = "#10B981" if "Đủ điều kiện" in assess_val else "#F59E0B"
-                        st.markdown(
-                            f"<div style='padding: 6px 12px; background: #F8FAFC; border-left: 4px solid {assess_color}; font-weight: 700; border-radius: 6px; font-size: 0.88rem;'>"
-                            f"📌 {assess_val}</div>",
-                            unsafe_allow_html=True
-                        )
+                        st.write(f"**Chuyên viên thẩm định:** {l_rev.get('reviewer_name')} (`@{l_rev.get('reviewer')}`)")
+                        st.write(f"**Thời gian thẩm định:** {l_rev.get('reviewed_at')}")
+                        st.write(f"**Đánh giá tổng quát:** **{l_rev.get('general_assessment')}**")
 
-                        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-                        st.markdown("**Ý kiến kết luận của Pháp chế:**")
-                        st.markdown(
-                            f"<div style='padding: 10px; background: #F1F5F9; border-radius: 8px; font-size: 0.85rem; color: #334155; font-style: italic;'>"
-                            f"\"{l_review.get('summary_notes', 'Không có ghi chú.')}\"</div>",
-                            unsafe_allow_html=True
-                        )
+                    summary_opinion = l_rev.get('summary_notes', 'Không có ghi chú.')
+                    st.info(f"💡 **Ý kiến kết luận:** {summary_opinion}")
 
-                    st.markdown("---")
-                    st.markdown("**Chi tiết đánh giá từng mục Checklist (Chỉ xem):**")
-                    chk_res = l_review.get("checklist_results", {})
-                    if chk_res:
-                        for it_name, it_data in chk_res.items():
-                            it_status = it_data.get("status", "Đạt")
-                            it_comment = it_data.get("comment", "")
-                            status_badge = "🟢 Đạt" if it_status == "Đạt" else ("🔴 Không đạt" if it_status == "Không đạt" else "🟡 Có góp ý")
-                            st.markdown(
-                                f"<div style='padding: 6px 10px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem;'>"
-                                f"<b>{it_name}</b>: <span style='font-weight: 700;'>{status_badge}</span> "
-                                f"{f'— <i>Ý kiến: {it_comment}</i>' if it_comment else ''}</div>",
-                                unsafe_allow_html=True
-                            )
-                    else:
-                        st.caption("Chưa có chi tiết checklist được lưu trữ.")
+                    st.markdown("**Kết quả checklist chi tiết:**")
+                    for chk_name, chk_res in l_rev.get("checklist_results", {}).items():
+                        c_stat = chk_res.get("status", "N/A")
+                        c_com = chk_res.get("comment", "")
+                        st.markdown(f"- **{chk_name}**: [{c_stat}] {f'*(Ghi chú: {c_com})*' if c_com else ''}")
 
 # ==============================================================================
-# 10. BƯỚC 6: TẠO FILE PDF PHIẾU GÓP Ý (UNICODE) & GỬI EMAIL SMTPLIB
+# 10. HÀM TẠO FILE PDF & GỬI EMAIL THÔNG BÁO TỰ ĐỘNG
 # ==============================================================================
-class ContractReviewPDF(FPDF):
+class UnicodeLegalPDF(FPDF):
+    def __init__(self):
+        super().__init__(orientation="P", unit="mm", format="A4")
+        self.set_auto_page_break(auto=True, margin=15)
+        # Nạp font Unicode Arial tiếng Việt
+        font_regular = "Arial.ttf" if os.path.exists("Arial.ttf") else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        font_bold = "Arial-Bold.ttf" if os.path.exists("Arial-Bold.ttf") else "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+        if os.path.exists(font_regular):
+            self.add_font("VN_Font", "", font_regular, uni=True)
+            self.has_vn_font = True
+        else:
+            self.has_vn_font = False
+
+        if os.path.exists(font_bold):
+            self.add_font("VN_Font", "B", font_bold, uni=True)
+            self.has_vn_bold = True
+        else:
+            self.has_vn_bold = False
+
     def header(self):
-        self.set_fill_color(30, 64, 175)
-        self.rect(0, 0, 210, 8, "F")
-        self.ln(4)
+        if hasattr(self, "has_vn_font") and self.has_vn_font:
+            self.set_font("VN_Font", "B", 11)
+            self.cell(0, 7, "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU - PHÒNG PHÁP CHẾ", ln=True, align="C")
+            self.set_font("VN_Font", "", 9)
+            self.cell(0, 5, "HỆ THỐNG QUẢN LÝ VÀ PHÊ DUYỆT PHÁP CHẾ HỢP ĐỒNG", ln=True, align="C")
+            self.line(15, 24, 195, 24)
+            self.ln(6)
+        else:
+            self.set_font("Helvetica", "B", 10)
+            self.cell(0, 6, "ENTERPRISE LEGAL REVIEW SYSTEM", ln=True, align="C")
+            self.ln(5)
 
     def footer(self):
-        self.set_y(-16)
-        self.set_draw_color(226, 232, 240)
-        self.line(10, 281, 200, 281)
-        font_to_use = getattr(self, "custom_font_family", "Helvetica")
-        try:
-            self.set_font(font_to_use, "", 8)
-        except Exception:
-            self.set_font("Helvetica", "I", 8)
-        self.set_text_color(100, 116, 139)
-        self.cell(0, 10, f"Trang {self.page_no()} | He thong Quan tri Hop dong - Asia Holdings", 0, 0, "C")
-
-def get_unicode_font_paths():
-    """Tìm font TTF hỗ trợ Unicode tiếng Việt trên hệ thống"""
-    font_candidates = [
-        "/Arial.ttf",
-        "Arial.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "C:\\Windows\\Fonts\\arial.ttf"
-    ]
-    bold_candidates = [
-        "/Arial-Bold.ttf",
-        "Arial-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "C:\\Windows\\Fonts\\arialbd.ttf"
-    ]
-    regular = next((p for p in font_candidates if os.path.exists(p)), None)
-    bold = next((p for p in bold_candidates if os.path.exists(p)), None)
-    if not bold and regular:
-        bold = regular
-    return regular, bold
+        self.set_y(-15)
+        if hasattr(self, "has_vn_font") and self.has_vn_font:
+            self.set_font("VN_Font", "", 8)
+            self.cell(0, 10, f"Trang {self.page_no()}/{{nb}} - Phiếu góp ý hợp đồng phát hành từ hệ thống nội bộ", align="C")
+        else:
+            self.set_font("Helvetica", "", 8)
+            self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="C")
 
 def generate_review_pdf(contract: dict, action_type: str, director_notes: str, director_name: str) -> bytes:
-    """
-    Dùng fpdf tạo file PDF 'Phiếu góp ý Hợp đồng'.
-    Bắt buộc cấu hình font Unicode (như Arial.ttf) để tiếng Việt trên PDF không bị lỗi.
-    Bao gồm:
-    - Tên, Loại hợp đồng, Đối tác, Phòng ban, Giá trị
-    - Đánh giá các mục Checklist
-    - Kết luận và Quyết định phê duyệt
-    """
-    pdf = ContractReviewPDF(orientation="P", unit="mm", format="A4")
-    pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.add_page()
+    try:
+        pdf = UnicodeLegalPDF()
+        pdf.alias_nb_pages()
+        pdf.add_page()
+        f_name = "VN_Font" if getattr(pdf, "has_vn_font", False) else "Helvetica"
 
-    font_path, font_bold_path = get_unicode_font_paths()
-    font_family = "Helvetica"
-    if font_path:
-        try:
-            pdf.add_font("ArialUnicode", "", font_path, uni=True)
-            if font_bold_path:
-                pdf.add_font("ArialUnicode", "B", font_bold_path, uni=True)
-            else:
-                pdf.add_font("ArialUnicode", "B", font_path, uni=True)
-            font_family = "ArialUnicode"
-        except Exception:
-            font_family = "Helvetica"
+        # Tiêu đề tài liệu
+        pdf.set_font(f_name, "B", 15)
+        pdf.ln(3)
+        title_text = "PHIẾU ĐÁNH GIÁ & GÓP Ý PHÁP LÝ HỢP ĐỒNG"
+        pdf.cell(0, 10, title_text, ln=True, align="C")
+        pdf.ln(2)
 
-    pdf.custom_font_family = font_family
+        # 1. THÔNG TIN HỢP ĐỒNG
+        pdf.set_font(f_name, "B", 11)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(0, 7, "I. THÔNG TIN CHUNG HỒ SƠ HỢP ĐỒNG", ln=True, fill=True)
+        pdf.ln(2)
 
-    # 1. TIÊU ĐỀ DOANH NGHIỆP
-    pdf.set_font(font_family, "B", 11)
-    pdf.set_text_color(30, 41, 59)
-    pdf.cell(0, 6, "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU - ASIA HOLDINGS", 0, 1, "C")
-    pdf.set_font(font_family, "", 9)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 5, "HỘI ĐỒNG THẨM ĐỊNH & PHÊ DUYỆT PHÁP LÝ HỢP ĐỒNG", 0, 1, "C")
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Mã hồ sơ hợp đồng:", 0, 0)
+        pdf.set_font(f_name, "B", 10)
+        pdf.cell(0, 6, str(contract.get("id", "N/A")), ln=True)
 
-    pdf.set_draw_color(37, 99, 235)
-    pdf.set_line_width(0.8)
-    pdf.line(70, 24, 140, 24)
-    pdf.ln(7)
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Tên dự thảo hợp đồng:", 0, 0)
+        pdf.set_font(f_name, "B", 10)
+        pdf.multi_cell(0, 6, str(contract.get("title", "N/A")))
 
-    # Tiêu đề chính
-    pdf.set_font(font_family, "B", 15)
-    pdf.set_text_color(30, 64, 175)
-    pdf.cell(0, 8, "PHIẾU GÓP Ý & THẨM ĐỊNH HỢP ĐỒNG", 0, 1, "C")
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Đối tác / Khách hàng:", 0, 0)
+        pdf.cell(0, 6, str(contract.get("partner_name", "N/A")), ln=True)
 
-    pdf.set_font(font_family, "", 8.5)
-    pdf.set_text_color(71, 85, 105)
-    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    pdf.cell(0, 5, f"Mã hồ sơ: {contract.get('id', 'N/A')} | Thời gian xuất phiếu: {now_str}", 0, 1, "C")
-    pdf.ln(3)
+        pdf.cell(45, 6, "• Đơn vị đề xuất:", 0, 0)
+        pdf.cell(0, 6, f"{contract.get('department', 'N/A')} (Cán bộ: @{contract.get('created_by', 'N/A')})", ln=True)
 
-    # 2. PHẦN I: THÔNG TIN HỒ SƠ HỢP ĐỒNG
-    pdf.set_fill_color(241, 245, 249)
-    pdf.set_font(font_family, "B", 10.5)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6.5, "  I. THÔNG TIN HỒ SƠ HỢP ĐỒNG", 0, 1, "L", fill=True)
-    pdf.ln(1.5)
+        val_vnd = contract.get("value_vnd", 0)
+        pdf.cell(45, 6, "• Giá trị hợp đồng:", 0, 0)
+        pdf.cell(0, 6, f"{val_vnd:,.0f} VNĐ", ln=True)
 
-    info_rows = [
-        ("Mã hợp đồng:", str(contract.get("id", "")), "Loại hợp đồng:", str(contract.get("contract_type", "Hợp đồng kinh tế"))),
-        ("Tên hợp đồng:", str(contract.get("title", "")), "Phòng ban đề xuất:", str(contract.get("department", ""))),
-        ("Đối tác (Bên B):", str(contract.get("partner_name", "")), "Giá trị (VNĐ):", f"{contract.get('value_vnd', 0):,.0f} VNĐ"),
-        ("Người đề xuất:", str(contract.get("created_by", "")), "Thời hạn hiệu lực:", f"{contract.get('effective_date', '')} đến {contract.get('expiration_date', '')}")
-    ]
+        pdf.cell(45, 6, "• Thời hạn hiệu lực:", 0, 0)
+        pdf.cell(0, 6, f"Từ {contract.get('effective_date', 'N/A')} đến {contract.get('expiration_date', 'N/A')}", ln=True)
+        pdf.ln(4)
 
-    for label1, val1, label2, val2 in info_rows:
-        pdf.set_font(font_family, "B", 8.5)
-        pdf.set_text_color(30, 41, 59)
-        pdf.cell(32, 5.5, label1, 0, 0, "L")
-        pdf.set_font(font_family, "", 8.5)
-        pdf.cell(63, 5.5, val1[:40], 0, 0, "L")
+        # 2. Ý KIẾN THẨM ĐỊNH CỦA PHÒNG PHÁP CHẾ
+        legal_rev = contract.get("legal_review", {})
+        pdf.set_font(f_name, "B", 11)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(0, 7, "II. KẾT QUẢ RÀ SOÁT CỦA PHÒNG PHÁP CHẾ", ln=True, fill=True)
+        pdf.ln(2)
 
-        pdf.set_font(font_family, "B", 8.5)
-        pdf.cell(35, 5.5, label2, 0, 0, "L")
-        pdf.set_font(font_family, "", 8.5)
-        pdf.cell(60, 5.5, val2[:40], 0, 1, "L")
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Chuyên viên thẩm định:", 0, 0)
+        pdf.cell(0, 6, f"{legal_rev.get('reviewer_name', 'Chuyên viên')} (@{legal_rev.get('reviewer', 'N/A')})", ln=True)
 
-    pdf.ln(2.5)
+        pdf.cell(45, 6, "• Thời gian hoàn tất:", 0, 0)
+        pdf.cell(0, 6, str(legal_rev.get("reviewed_at", "N/A")), ln=True)
 
-    # 3. PHẦN II: KẾT QUẢ THẨM ĐỊNH CỦA BAN PHÁP CHẾ
-    pdf.set_fill_color(241, 245, 249)
-    pdf.set_font(font_family, "B", 10.5)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6.5, "  II. KẾT QUẢ THẨM ĐỊNH CỦA BAN PHÁP CHẾ", 0, 1, "L", fill=True)
-    pdf.ln(1.5)
+        pdf.cell(45, 6, "• Kết luận chuyên môn:", 0, 0)
+        pdf.set_font(f_name, "B", 10)
+        pdf.cell(0, 6, str(legal_rev.get("general_assessment", "Chưa có đánh giá")), ln=True)
 
-    lr = contract.get("legal_review", {})
-    reviewer_name = lr.get("reviewer_name", contract.get("assigned_to", "Chuyên viên Pháp chế"))
-    reviewed_at = lr.get("reviewed_at", "Đã thẩm định")
-    assessment = lr.get("general_assessment", "Đủ điều kiện pháp lý - Đề xuất ký")
-    notes = lr.get("summary_notes", "Không có ghi chú thêm.")
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Chi tiết ý kiến góp ý:", 0, 0)
+        pdf.multi_cell(0, 6, str(legal_rev.get("summary_notes", "Không có ghi chú thêm.")))
+        pdf.ln(3)
 
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.set_text_color(30, 41, 59)
-    pdf.cell(38, 5.5, "Chuyên viên thẩm định:", 0, 0, "L")
-    pdf.set_font(font_family, "", 8.5)
-    pdf.cell(57, 5.5, f"{reviewer_name} (@{contract.get('assigned_to', '')})", 0, 0, "L")
+        # 3. KẾT QUẢ CHECKLIST HỒ SƠ
+        chk_res = legal_rev.get("checklist_results", {})
+        if chk_res:
+            pdf.set_font(f_name, "B", 9)
+            pdf.set_fill_color(226, 232, 240)
+            pdf.cell(90, 6, "Hạng mục tài liệu hồ sơ", border=1, fill=True)
+            pdf.cell(35, 6, "Đánh giá", border=1, fill=True, align="C")
+            pdf.cell(55, 6, "Góp ý chi tiết", border=1, fill=True)
+            pdf.ln()
 
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.cell(35, 5.5, "Thời gian thẩm định:", 0, 0, "L")
-    pdf.set_font(font_family, "", 8.5)
-    pdf.cell(60, 5.5, str(reviewed_at), 0, 1, "L")
+            pdf.set_font(f_name, "", 8)
+            for it_name, it_data in chk_res.items():
+                pdf.cell(90, 6, str(it_name)[:50], border=1)
+                pdf.cell(35, 6, str(it_data.get("status", "Đạt")), border=1, align="C")
+                pdf.cell(55, 6, str(it_data.get("comment", ""))[:35], border=1)
+                pdf.ln()
+            pdf.ln(4)
 
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.cell(38, 5.5, "Đánh giá tổng quát:", 0, 0, "L")
-    pdf.set_font(font_family, "B", 9)
-    if "Đủ điều kiện" in assessment:
-        pdf.set_text_color(22, 101, 52)
-    elif "Không đủ" in assessment:
-        pdf.set_text_color(185, 28, 28)
-    else:
-        pdf.set_text_color(180, 83, 9)
-    pdf.cell(0, 5.5, f"[ {assessment} ]", 0, 1, "L")
+        # 4. QUYẾT ĐỊNH CỦA GIÁM ĐỐC
+        pdf.set_font(f_name, "B", 11)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(0, 7, "III. KẾT LUẬN & CHỈ ĐẠO CỦA GIÁM ĐỐC PHÁP CHẾ", ln=True, fill=True)
+        pdf.ln(2)
 
-    pdf.set_text_color(30, 41, 59)
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.cell(0, 5, "Ý kiến kết luận của Pháp chế:", 0, 1, "L")
-    pdf.set_font(font_family, "", 8.5)
-    pdf.multi_cell(0, 4.8, f'"{notes}"')
-    pdf.ln(2.5)
+        action_display = "ĐỒNG Ý KÝ DUYỆT PHÁT HÀNH" if action_type == "approve" else "YÊU CẦU ĐIỀU CHỈNH & LÀM LẠI"
+        pdf.set_font(f_name, "B", 10)
+        pdf.cell(45, 6, "• Quyết định phê duyệt:", 0, 0)
+        pdf.cell(0, 6, action_display, ln=True)
 
-    # 4. PHẦN III: BẢNG ĐÁNH GIÁ CHI TIẾT TỪNG MỤC CHECKLIST
-    pdf.set_fill_color(241, 245, 249)
-    pdf.set_font(font_family, "B", 10.5)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6.5, "  III. BẢNG ĐÁNH GIÁ CHI TIẾT CÁC MỤC CHECKLIST", 0, 1, "L", fill=True)
-    pdf.ln(1.5)
+        pdf.set_font(f_name, "", 10)
+        pdf.cell(45, 6, "• Ý kiến chỉ đạo:", 0, 0)
+        pdf.multi_cell(0, 6, director_notes.strip() if director_notes else "Đồng ý theo kết quả thẩm định.")
+        pdf.ln(8)
 
-    pdf.set_fill_color(30, 64, 175)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font(font_family, "B", 8)
-    pdf.cell(10, 6, "STT", 1, 0, "C", fill=True)
-    pdf.cell(65, 6, "Hạng mục kiểm tra", 1, 0, "L", fill=True)
-    pdf.cell(28, 6, "Kết quả", 1, 0, "C", fill=True)
-    pdf.cell(87, 6, "Nội dung ý kiến góp ý / Ghi chú", 1, 1, "L", fill=True)
+        # Chữ ký xác nhận
+        pdf.set_font(f_name, "B", 10)
+        pdf.cell(100, 5, "", 0, 0)
+        pdf.cell(80, 5, "GIÁM ĐỐC PHÁP CHẾ", 0, 1, "C")
+        pdf.set_font(f_name, "", 9)
+        pdf.cell(100, 5, "", 0, 0)
+        pdf.cell(80, 5, "(Đã ký điện tử và xác thực trên hệ thống)", 0, 1, "C")
+        pdf.ln(12)
+        pdf.set_font(f_name, "B", 10)
+        pdf.cell(100, 5, "", 0, 0)
+        pdf.cell(80, 5, director_name, 0, 1, "C")
 
-    chk_results = lr.get("checklist_results", {})
-    if not chk_results:
-        chk_results = {
-            "Dự thảo Hợp đồng chi tiết": {"status": "Đạt", "comment": "Điều khoản rõ ràng, tuân thủ pháp luật."},
-            "Hồ sơ năng lực & Pháp lý đối tác": {"status": "Đạt", "comment": "Đầy đủ ĐKKD và tài liệu đính kèm."}
-        }
+        return bytes(pdf.output())
+    except Exception as pdf_err:
+        st.error(f"Lỗi tạo tệp PDF: {pdf_err}")
+        return b"%PDF-1.4 dummy pdf bytes"
 
-    row_idx = 1
-    pdf.set_text_color(30, 41, 59)
-    for item_name, item_res in chk_results.items():
-        st_val = item_res.get("status", "Đạt")
-        cm_val = item_res.get("comment", "Không có góp ý thêm.")
+def send_approval_email(contract: dict, pdf_bytes: bytes, pdf_filename: str, action_type: str, director_notes: str) -> tuple:
+    system_cfg = get_config()
+    smtp_data = system_cfg.get("smtp_settings", {})
+    server_host = smtp_data.get("server", "smtp.gmail.com")
+    server_port = int(smtp_data.get("port", 587))
+    sender_mail = smtp_data.get("sender_email", "")
+    app_pwd = smtp_data.get("app_password", "")
+    use_tls = smtp_data.get("use_tls", True)
 
-        pdf.set_font(font_family, "", 8)
-        pdf.cell(10, 5.5, str(row_idx), 1, 0, "C")
-        pdf.cell(65, 5.5, item_name[:36], 1, 0, "L")
+    users_db = get_users()
+    creator_uname = contract.get("created_by", "")
+    creator_obj = next((u for u in users_db if u.get("username") == creator_uname), None)
+    to_mail = creator_obj.get("email") if creator_obj else f"{creator_uname}@congty.com.vn"
 
-        pdf.set_font(font_family, "B", 8)
-        if st_val == "Đạt":
-            pdf.set_text_color(22, 101, 52)
-        elif st_val == "Không đạt":
-            pdf.set_text_color(185, 28, 28)
-        else:
-            pdf.set_text_color(180, 83, 9)
-        pdf.cell(28, 5.5, st_val, 1, 0, "C")
-
-        pdf.set_text_color(30, 41, 59)
-        pdf.set_font(font_family, "", 7.8)
-        pdf.cell(87, 5.5, cm_val[:55], 1, 1, "L")
-        row_idx += 1
-
-    pdf.ln(2.5)
-
-    # 5. PHẦN IV: QUYẾT ĐỊNH & PHÊ DUYỆT CỦA GIÁM ĐỐC
-    pdf.set_fill_color(241, 245, 249)
-    pdf.set_font(font_family, "B", 10.5)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6.5, "  IV. QUYẾT ĐỊNH & PHÊ DUYỆT CỦA BAN GIÁM ĐỐC", 0, 1, "L", fill=True)
-    pdf.ln(1.5)
-
-    decision_text = "KÝ DUYỆT PHÁT HÀNH (HOÀN TẤT)" if action_type == "approve" else "YÊU CẦU LÀM LẠI / ĐIỀU CHỈNH"
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.set_text_color(30, 41, 59)
-    pdf.cell(42, 5.5, "Quyết định của Giám đốc:", 0, 0, "L")
-
-    if action_type == "approve":
-        pdf.set_text_color(22, 101, 52)
-    else:
-        pdf.set_text_color(185, 28, 28)
-    pdf.cell(0, 5.5, f"[ {decision_text} ]", 0, 1, "L")
-
-    pdf.set_text_color(30, 41, 59)
-    pdf.set_font(font_family, "B", 8.5)
-    pdf.cell(0, 5, "Ý kiến chỉ đạo của Giám đốc:", 0, 1, "L")
-    pdf.set_font(font_family, "", 8.5)
-    pdf.multi_cell(0, 4.8, f'"{director_notes}"')
-    pdf.ln(4)
-
-    # CHỮ KÝ ĐIỆN TỬ
-    pdf.set_font(font_family, "B", 9)
-    pdf.cell(95, 5, "CHUYÊN VIÊN THẨM ĐỊNH", 0, 0, "C")
-    pdf.cell(95, 5, "GIÁM ĐỐC PHÁP CHẾ PHÊ DUYỆT", 0, 1, "C")
-
-    pdf.set_font(font_family, "I", 7.8)
-    pdf.set_text_color(100, 116, 139)
-    pdf.cell(95, 4, "(Ký, ghi rõ họ tên)", 0, 0, "C")
-    pdf.cell(95, 4, "(Ký duyệt điện tử)", 0, 1, "C")
-    pdf.ln(10)
-
-    pdf.set_font(font_family, "B", 9)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(95, 5, str(reviewer_name), 0, 0, "C")
-    pdf.cell(95, 5, str(director_name), 0, 1, "C")
+    if not sender_mail or not app_pwd:
+        return (False, "Chưa thiết lập App Password cho Email trong config.json (đã bỏ qua gửi email). Đã xuất file PDF thành công!")
 
     try:
-        out = pdf.output(dest="S")
-        if isinstance(out, str):
-            return out.encode("latin1")
-        return bytes(out)
-    except Exception:
-        return str(pdf.output()).encode("latin1")
+        msg = MIMEMultipart()
+        msg["From"] = sender_mail
+        msg["To"] = to_mail
+        action_vn = "KÝ DUYỆT PHÁT HÀNH" if action_type == "approve" else "YÊU CẦU LÀM LẠI"
+        msg["Subject"] = f"[{action_vn}] Thông báo kết quả phê duyệt hồ sơ: {contract.get('id')} - {contract.get('title')}"
 
-def send_approval_email(contract: dict, pdf_bytes: bytes, pdf_filename: str, action_type: str, director_notes: str) -> tuple[bool, str]:
-    """
-    Dùng smtplib đọc cấu hình từ config.json và email phòng ban từ users.json
-    để gửi email tự động đính kèm file PDF (có try-except báo lỗi nếu sai cấu hình mail).
-    """
-    config_data = get_config()
-    smtp_settings = config_data.get("smtp_settings", {})
+        body_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h3 style="color: #1E3A8A;">THÔNG BÁO TỪ PHÒNG PHÁP CHẾ</h3>
+            <p>Kính gửi: <b>{contract.get('department')}</b> (Cán bộ đề xuất: <b>@{creator_uname}</b>),</p>
+            <p>Hồ sơ hợp đồng: <b>{contract.get('id')} - {contract.get('title')}</b> đã được Giám đốc Pháp chế xử lý.</p>
+            <div style="background-color: #F1F5F9; border-left: 4px solid #2563EB; padding: 12px; margin: 15px 0;">
+                <p style="margin: 0;"><b>Kết quả:</b> <span style="color: {'#16A34A' if action_type == 'approve' else '#DC2626'}; font-weight: bold;">{action_vn}</span></p>
+                <p style="margin: 5px 0 0 0;"><b>Ý kiến chỉ đạo của Giám đốc:</b> <i>"{director_notes}"</i></p>
+            </div>
+            <p>Tệp <b>'Phiếu đánh giá & góp ý pháp lý hợp đồng'</b> định dạng PDF đã được đính kèm thư này.</p>
+            <br/>
+            <p style="font-size: 0.85rem; color: #64748B;">Hệ thống Quản lý và Thẩm định Pháp chế Hợp đồng tự động.</p>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body_html, "html", "utf-8"))
 
-    server_host = smtp_settings.get("server", "smtp.gmail.com")
-    server_port = int(smtp_settings.get("port", 587))
-    sender_email = smtp_settings.get("sender_email", "notification@asiaholdings.vn")
-    app_password = smtp_settings.get("app_password", "")
-    use_tls = smtp_settings.get("use_tls", True)
-
-    users_list = get_users()
-
-    created_by_user = next((u for u in users_list if u.get("username") == contract.get("created_by")), None)
-    assigned_user = next((u for u in users_list if u.get("username") == contract.get("assigned_to")), None)
-
-    to_emails = []
-    if created_by_user and created_by_user.get("email"):
-        to_emails.append(created_by_user.get("email"))
-    if assigned_user and assigned_user.get("email"):
-        to_emails.append(assigned_user.get("email"))
-
-    if not to_emails:
-        to_emails = [f"{contract.get('created_by', 'kinhdoanh01')}@congty.com.vn"]
-
-    to_emails = list(set(to_emails))
-
-    action_label = "Ký duyệt phát hành (Hoàn tất)" if action_type == "approve" else "Yêu cầu làm lại"
-    subject = f"[Asia Holdings] Thông báo {action_label}: Hợp đồng {contract.get('id')} - {contract.get('title')}"
-
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = ", ".join(to_emails)
-    msg["Subject"] = subject
-
-    body_content = f"""
-Kính gửi Phòng ban đề xuất ({contract.get('department')}) và Phòng Pháp chế,
-
-Hệ thống Quản trị Hợp đồng Asia Holdings thông báo kết quả phê duyệt hồ sơ từ Ban Giám đốc:
-
-1. THÔNG TIN HỒ SƠ:
-   - Mã hợp đồng: {contract.get('id')}
-   - Tên hợp đồng: {contract.get('title')}
-   - Đối tác: {contract.get('partner_name')}
-   - Giá trị: {contract.get('value_vnd', 0):,.0f} VNĐ
-   - Phòng ban đề xuất: {contract.get('department')} (Người tạo: @{contract.get('created_by')})
-
-2. KẾT QUẢ PHÊ DUYỆT:
-   - Quyết định: {action_label}
-   - Ý kiến chỉ đạo của Giám đốc: "{director_notes}"
-   - Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-Đính kèm email này là tập tin PDF 'Phiếu góp ý Hợp đồng' bản chính thức (có chữ ký phê duyệt).
-
-Trân trọng,
-Ban Giám đốc Pháp chế - Asia Holdings
-    """.strip()
-
-    msg.attach(MIMEText(body_content, "plain", "utf-8"))
-
-    if pdf_bytes:
-        try:
-            part = MIMEApplication(pdf_bytes, _subtype="pdf")
-            part.add_header("Content-Disposition", "attachment", filename=pdf_filename)
+        if pdf_bytes:
+            part = MIMEApplication(pdf_bytes, Name=pdf_filename)
+            part["Content-Disposition"] = f'attachment; filename="{pdf_filename}"'
             msg.attach(part)
-        except Exception:
-            pass
 
-    try:
-        if not app_password:
-            return (
-                False,
-                f"Đã tạo email gửi tới [{', '.join(to_emails)}] nhưng chưa gửi thực tế do 'app_password' trong config.json đang để trống. "
-                f"(Vui lòng điền Mật khẩu ứng dụng SMTP tại config.json để gửi thật qua {server_host})."
-            )
-
-        if use_tls:
-            with smtplib.SMTP(server_host, server_port, timeout=10) as server:
-                server.starttls()
-                server.login(sender_email, app_password)
-                server.sendmail(sender_email, to_emails, msg.as_string())
-        else:
-            with smtplib.SMTP(server_host, server_port, timeout=10) as server:
-                server.login(sender_email, app_password)
-                server.sendmail(sender_email, to_emails, msg.as_string())
-
-        return (True, f"Đã gửi email thông báo tự động đính kèm file PDF tới: {', '.join(to_emails)}")
+        server = smtplib.SMTP(server_host, server_port, timeout=10)
+        if use_tls: server.starttls()
+        server.login(sender_mail, app_pwd)
+        server.sendmail(sender_mail, [to_mail], msg.as_string())
+        server.quit()
+        return (True, f"Đã gửi email thông báo kèm tệp PDF thành công tới: {to_mail}!")
     except Exception as smtp_error:
         return (False, f"Lỗi gửi email qua {server_host}:{server_port} ({str(smtp_error)}). Đã lưu phiếu góp ý PDF thành công!")
 
 # ==============================================================================
-# 11. BƯỚC 5 & 6: HÀM DIRECTOR_VIEW() HOÀN CHỈNH - 4 TABS DÀNH CHO GIÁM ĐỐC
+# 11. BƯỚC 5 & 6: HÀM DIRECTOR_VIEW() HOÀN CHỈNH - HỖ TRỢ CHẾ ĐỘ READ-ONLY (GOD MODE)
 # ==============================================================================
-def director_view():
+def director_view(readonly: bool = False, active_tab: str = None):
     """
-    Giao diện Quản trị Dành cho Giám đốc Pháp chế (director_view - Hoàn chỉnh):
-    Hàm gồm 4 Tab chi tiết, KHÔNG dùng placeholder:
+    Giao diện Quản trị Dành cho Giám đốc Pháp chế & Giám sát Read-Only dành cho Admin:
+    Hàm gồm 4 Tab chi tiết:
     Tab 1: Dashboard Thống kê
       - Dùng pandas đọc contracts.json.
       - Hiển thị st.metric (Tổng hồ sơ, Chờ phân công, Đang rà soát, Đã xong).
@@ -1638,18 +1504,55 @@ def director_view():
     current_username = current_user.get("username", "")
     current_fullname = current_user.get("full_name", "Giám đốc Pháp chế")
 
-    st.title("👑 Bàn Làm Việc Giám Đốc Pháp Chế")
-    st.markdown(
-        f"Lãnh đạo phụ trách: **{current_fullname}** (`@{current_username}`) | "
-        f"Bộ phận: **{current_user.get('department', 'Ban Giám đốc')}**"
-    )
+    if readonly:
+        st.title("🛡️ Giám Sát Hệ Thống Hợp Đồng (Read-Only Mode)")
+        st.markdown(
+            """
+            <div style="background: #FEF3C7; border: 1.5px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="font-size: 0.95rem; font-weight: 800; color: #92400E;">👑 CHẾ ĐỘ GIÁM SÁT DÀNH CHO ADMIN (READ-ONLY / GOD MODE)</div>
+                <div style="font-size: 0.84rem; color: #78350F; margin-top: 4px;">
+                    Bạn đang giám sát toàn bộ hoạt động của hệ thống với quyền Quản trị viên (Admin). Bạn có quyền tra cứu Dashboard thống kê, xem danh sách hồ sơ, đọc tệp PDF hợp đồng đính kèm và xem phiếu thẩm định của Pháp chế.<br/>
+                    <b>Tất cả các nút hành động (Phân công, Điều chuyển, Ký duyệt, Yêu cầu làm lại) đã được vô hiệu hóa để bảo đảm tính độc lập chuyên môn của Phòng Pháp chế.</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.title("👑 Bàn Làm Việc Giám Đốc Pháp Chế")
+        st.markdown(
+            f"Lãnh đạo phụ trách: **{current_fullname}** (`@{current_username}`) | "
+            f"Bộ phận: **{current_user.get('department', 'Ban Giám đốc')}**"
+        )
 
-    tab_stats, tab_assign, tab_transfer, tab_approve = st.tabs([
-        "📊 Dashboard Thống kê",
-        "📋 Phân công hồ sơ",
-        "🔄 Điều chuyển nhân sự",
-        "✍️ Phê duyệt & Ban hành"
-    ])
+    if readonly:
+        tab_stats, tab_assign, tab_transfer, tab_approve = st.tabs([
+            "📊 Dashboard Thống kê",
+            "📋 Giám sát Phân công",
+            "🔄 Giám sát Điều chuyển",
+            "✍️ Giám sát Phê duyệt & Hồ sơ"
+        ])
+    elif active_tab == "assign":
+        tab_assign, tab_transfer, tab_approve, tab_stats = st.tabs([
+            "📋 Phân công hồ sơ",
+            "🔄 Điều chuyển nhân sự",
+            "✍️ Phê duyệt & Ban hành",
+            "📊 Dashboard Thống kê"
+        ])
+    elif active_tab == "approve":
+        tab_approve, tab_stats, tab_assign, tab_transfer = st.tabs([
+            "✍️ Phê duyệt & Ban hành",
+            "📊 Dashboard Thống kê",
+            "📋 Phân công hồ sơ",
+            "🔄 Điều chuyển nhân sự"
+        ])
+    else:
+        tab_stats, tab_assign, tab_transfer, tab_approve = st.tabs([
+            "📊 Dashboard Thống kê",
+            "📋 Phân công hồ sơ",
+            "🔄 Điều chuyển nhân sự",
+            "✍️ Phê duyệt & Ban hành"
+        ])
 
     all_contracts = get_contracts()
     all_users = get_users()
@@ -1663,17 +1566,14 @@ def director_view():
         if not all_contracts:
             st.info("Hiện chưa có hợp đồng nào được lưu trữ trong hệ thống.")
         else:
-            # DÙNG PANDAS ĐỌC DỮ LIỆU TỪ CONTRACTS.JSON
             df_contracts = pd.DataFrame(all_contracts)
 
             # Tính toán các chỉ số
             total_contracts = len(df_contracts)
             pending_assign = len(df_contracts[df_contracts["status"] == "Chờ Giám đốc phân công"])
             in_review = len(df_contracts[df_contracts["status"] == "Đang rà soát"])
-            # 'Đã xong': Tính các hồ sơ đã qua rà soát hoặc hoàn tất
-            completed = len(df_contracts[df_contracts["status"].isin(["Chờ Giám đốc duyệt", "Đã duyệt", "Đã ký kết", "Đã hoàn tất"])])
+            completed = len(df_contracts[df_contracts["status"].isin(["Chờ Giám đốc duyệt", "Đã duyệt", "Đã ký kết", "Hoàn tất"])])
 
-            # 4 METRIC CARDS
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             with col_m1:
                 st.metric("Tổng hồ sơ", f"{total_contracts} hợp đồng")
@@ -1691,9 +1591,7 @@ def director_view():
 
             st.markdown("---")
 
-            # VẼ 2 BIỂU ĐỒ ST.BAR_CHART
             col_chart1, col_chart2 = st.columns(2)
-
             with col_chart1:
                 st.markdown("##### 📈 1. Phân bổ theo Trạng thái hồ sơ")
                 status_series = df_contracts["status"].value_counts()
@@ -1705,7 +1603,6 @@ def director_view():
 
             with col_chart2:
                 st.markdown("##### ⚖️ 2. Thống kê theo Mức độ rủi ro (Kết quả đánh giá)")
-                # Trích xuất general_assessment từ legal_review
                 risk_categories = []
                 for c in all_contracts:
                     lr = c.get("legal_review", {})
@@ -1728,19 +1625,16 @@ def director_view():
                 })
                 st.bar_chart(df_risk.set_index("Mức độ rủi ro"), color="#DC2626", use_container_width=True)
 
-            # Bảng tóm tắt nhanh
             with st.expander("📋 Xem danh sách bảng dữ liệu chi tiết", expanded=False):
                 view_cols = ["id", "title", "partner_name", "department", "value_vnd", "status", "assigned_to"]
                 avail_cols = [col for col in view_cols if col in df_contracts.columns]
                 st.dataframe(df_contracts[avail_cols], use_container_width=True)
 
     # ==========================================================================
-    # TAB 2: PHÂN CÔNG HỒ SƠ (XEM TỆP TIẾNG VIỆT, CHỌN NHÂN VIÊN, GIAO VIỆC)
+    # TAB 2: PHÂN CÔNG HỒ SƠ
     # ==========================================================================
     with tab_assign:
         st.subheader("📋 Phân Công Hồ Sơ Cho Chuyên Viên Pháp Chế")
-        
-        # LỌC HỒ SƠ 'Chờ Giám đốc phân công'
         pending_list = [c for c in all_contracts if c.get("status") == "Chờ Giám đốc phân công"]
 
         if not pending_list:
@@ -1772,7 +1666,6 @@ def director_view():
                 if target_contract.get("notes"):
                     st.info(f"💡 **Ghi chú đề xuất:** {target_contract.get('notes')}")
 
-                # GIÁM ĐỐC XEM NỘI DUNG CÁC TỆP TRONG HỒ SƠ (TIẾNG VIỆT CHÍNH XÁC)
                 st.markdown("##### 📎 Xem trước tệp đính kèm trong hồ sơ:")
                 attachments = target_contract.get("attachments", [])
                 if not attachments:
@@ -1843,14 +1736,11 @@ def director_view():
 
             with col_action:
                 st.markdown("#### 👤 Giao Việc Cho Nhân Viên Pháp Chế")
-                
-                # Lọc danh sách nhân viên pháp chế
                 legal_candidates = [
                     u for u in all_users
                     if u.get("department") == "Phòng Pháp chế" or "Pháp chế" in u.get("role", "")
                 ]
                 if not legal_candidates:
-                    # Nếu chưa có cấu hình riêng, hiển thị các users
                     legal_candidates = all_users
 
                 candidate_labels = [
@@ -1873,15 +1763,24 @@ def director_view():
                 )
 
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-                btn_do_assign = st.button(
-                    "🚀 Giao Việc & Chuyển Sang Trạng Thái 'Đang Rà Soát'",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"btn_assign_confirm_{target_contract.get('id')}"
-                )
+                if readonly:
+                    st.button(
+                        "🔒 Giao Việc Cho Pháp Chế (Vô hiệu hóa trong chế độ Read-Only)",
+                        disabled=True,
+                        use_container_width=True,
+                        key=f"btn_assign_confirm_{target_contract.get('id')}"
+                    )
+                    st.caption("🛡️ Quyền Read-Only: Tài khoản Admin chỉ giám sát, không can thiệp giao việc thay Giám đốc.")
+                    btn_do_assign = False
+                else:
+                    btn_do_assign = st.button(
+                        "🚀 Giao Việc & Chuyển Sang Trạng Thái 'Đang Rà Soát'",
+                        type="primary",
+                        use_container_width=True,
+                        key=f"btn_assign_confirm_{target_contract.get('id')}"
+                    )
 
                 if btn_do_assign:
-                    # ĐỔI TRẠNG THÁI THÀNH 'Đang rà soát' VÀ GÁN assigned_to
                     target_contract["status"] = "Đang rà soát"
                     target_contract["assigned_to"] = chosen_candidate.get("username")
                     target_contract["assigned_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1897,7 +1796,7 @@ def director_view():
                         st.rerun()
 
     # ==========================================================================
-    # TAB 3: ĐIỀU CHUYỂN (CHỌN HỒ SƠ ĐANG RÀ SOÁT, ĐỔI ASSIGNED_TO)
+    # TAB 3: ĐIỀU CHUYỂN
     # ==========================================================================
     with tab_transfer:
         st.subheader("🔄 Điều Chuyển Hồ Sơ Đang Rà Soát")
@@ -1906,7 +1805,6 @@ def director_view():
             "nghỉ phép hoặc cần phân bổ lại cho nhân sự có chuyên môn phù hợp."
         )
 
-        # LỌC HỒ SƠ 'Đang rà soát'
         in_review_list = [c for c in all_contracts if c.get("status") == "Đang rà soát"]
 
         if not in_review_list:
@@ -1925,7 +1823,6 @@ def director_view():
             transfer_contract = in_review_list[sel_trans_idx]
             current_assignee_username = transfer_contract.get("assigned_to", "")
             
-            # Tìm thông tin chuyên viên hiện tại
             current_assignee_obj = next((u for u in all_users if u.get("username") == current_assignee_username), None)
             current_assignee_name = current_assignee_obj.get("full_name", current_assignee_username) if current_assignee_obj else current_assignee_username
 
@@ -1945,22 +1842,22 @@ def director_view():
                     unsafe_allow_html=True
                 )
 
-                # Hiển thị lịch sử điều chuyển nếu có
                 reassignment_hist = transfer_contract.get("reassignment_history", [])
                 if reassignment_hist:
-                    st.markdown("###### 📜 Lịch sử các lần điều chuyển trước:")
-                    for idx, rh in enumerate(reassignment_hist, 1):
+                    st.markdown("##### 📜 Lịch sử các lần điều chuyển trước:")
+                    for h_idx, h_item in enumerate(reassignment_hist, 1):
                         st.markdown(
-                            f"<div style='font-size: 0.8rem; background: #F8FAFC; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; border: 1px solid #E2E8F0;'>"
-                            f"<b>Lần {idx}:</b> `{rh.get('transferred_at')}` — Từ <code>@{rh.get('from_user')}</code> sang <code>@{rh.get('to_user')}</code><br/>"
-                            f"<i>Lý do:</i> {rh.get('reason')}</div>",
+                            f"""
+                            <div style="font-size: 0.8rem; background: #F1F5F9; border-radius: 6px; padding: 6px 10px; margin-bottom: 4px;">
+                                <b>Lần {h_idx}:</b> Từ <code>@{h_item.get('from_user')}</code> sang <code>@{h_item.get('to_user')}</code> | 🕒 {h_item.get('timestamp')}<br/>
+                                <i>Lý do: {h_item.get('reason')}</i>
+                            </div>
+                            """,
                             unsafe_allow_html=True
                         )
 
             with col_t2:
-                st.markdown("##### 🔄 Chọn chuyên viên mới tiếp nhận:")
-                
-                # Danh sách ứng viên pháp chế
+                st.markdown("##### 🔄 Chọn chuyên viên mới & Nhập lý do điều chuyển:")
                 legal_candidates = [
                     u for u in all_users
                     if u.get("department") == "Phòng Pháp chế" or "Pháp chế" in u.get("role", "")
@@ -1988,12 +1885,22 @@ def director_view():
                 )
 
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-                btn_do_transfer = st.button(
-                    "🔄 Xác Nhận Điều Chuyển Hồ Sơ",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"btn_transfer_confirm_{transfer_contract.get('id')}"
-                )
+                if readonly:
+                    st.button(
+                        "🔒 Xác Nhận Điều Chuyển Hồ Sơ (Vô hiệu hóa trong chế độ Read-Only)",
+                        disabled=True,
+                        use_container_width=True,
+                        key=f"btn_transfer_confirm_{transfer_contract.get('id')}"
+                    )
+                    st.caption("🛡️ Quyền Read-Only: Tài khoản Admin chỉ giám sát, không thực hiện điều chuyển.")
+                    btn_do_transfer = False
+                else:
+                    btn_do_transfer = st.button(
+                        "🔄 Xác Nhận Điều Chuyển Hồ Sơ",
+                        type="primary",
+                        use_container_width=True,
+                        key=f"btn_transfer_confirm_{transfer_contract.get('id')}"
+                    )
 
                 if btn_do_transfer:
                     if not transfer_reason.strip():
@@ -2001,13 +1908,11 @@ def director_view():
                     elif chosen_new_candidate.get("username") == current_assignee_username:
                         st.warning("Chuyên viên được chọn trùng với chuyên viên đang phụ trách hiện tại! Vui lòng chọn nhân sự khác.")
                     else:
-                        # CẬP NHẬT ASSIGNED_TO SANG NHÂN VIÊN MỚI
                         old_assignee = current_assignee_username
                         new_assignee = chosen_new_candidate.get("username")
 
                         transfer_contract["assigned_to"] = new_assignee
 
-                        # LƯU LỊCH SỬ ĐIỀU CHUYỂN
                         if "reassignment_history" not in transfer_contract:
                             transfer_contract["reassignment_history"] = []
 
@@ -2016,212 +1921,121 @@ def director_view():
                             "from_user_name": current_assignee_name,
                             "to_user": new_assignee,
                             "to_user_name": chosen_new_candidate.get("full_name"),
-                            "transferred_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "transferred_by": current_username,
+                            "reassigned_by": current_username,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "reason": transfer_reason.strip()
                         })
 
                         if save_contracts(all_contracts):
                             st.success(
                                 f"🎉 Đã điều chuyển hồ sơ **'{transfer_contract.get('id')}'** từ chuyên viên "
-                                f"**{current_assignee_name}** (`@{old_assignee}`) sang **{chosen_new_candidate.get('full_name')}** (`@{new_assignee}`) thành công!"
+                                f"**{current_assignee_name}** sang **{chosen_new_candidate.get('full_name')}** (`@{new_assignee}`) thành công!"
                             )
                             st.rerun()
 
     # ==========================================================================
-    # TAB 4: PHÊ DUYỆT & BAN HÀNH (BƯỚC 6 - CHI TIẾT, KHÔNG DÙNG PLACEHOLDER)
+    # TAB 4: PHÊ DUYỆT & BAN HÀNH (BƯỚC 6)
     # ==========================================================================
     with tab_approve:
-        st.subheader("✍️ Phê Duyệt & Ban Hành Hợp Đồng")
-        st.markdown(
-            "Giám đốc Pháp chế đối chiếu nội dung văn bản hợp đồng (PDF) và toàn bộ lịch sử ý kiến thẩm định "
-            "của chuyên viên pháp chế để ra quyết định **'Ký duyệt phát hành'** hoặc **'Yêu cầu làm lại'**."
-        )
+        st.subheader("✍️ Phê Duyệt Hồ Sơ Hợp Đồng & Phát Hành 'Phiếu Góp Ý Hợp Đồng'")
+        waiting_approve_list = [c for c in all_contracts if c.get("status") == "Chờ Giám đốc duyệt"]
 
-        # HIỂN THỊ CÁC HỒ SƠ CÓ TRẠNG THÁI 'Chờ Giám đốc duyệt'
-        pending_approval_list = [c for c in all_contracts if c.get("status") == "Chờ Giám đốc duyệt"]
-
-        if not pending_approval_list:
-            st.info("Hiện không có hồ sơ nào ở trạng thái **'Chờ Giám đốc duyệt'**.")
+        if not waiting_approve_list:
+            st.info("Hiện tại không có hồ sơ nào ở trạng thái **'Chờ Giám đốc duyệt'**.")
+            st.markdown(
+                """
+                <div style="margin-top: 10px; padding: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 0.85rem; color: #475569;">
+                    💡 Hồ sơ sẽ xuất hiện tại đây sau khi Chuyên viên Pháp chế hoàn tất thẩm định tại <b>Bàn làm việc Pháp chế (legal_staff_view)</b> và nhấn <i>'Trình Giám đốc duyệt'</i>.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
-            approval_labels = [
-                f"{c.get('id')} — {c.get('title')} ({c.get('partner_name')} | {c.get('department')} | {c.get('value_vnd', 0):,.0f} VNĐ)"
-                for c in pending_approval_list
+            appr_labels = [
+                f"{c.get('id')} — {c.get('title')} ({c.get('partner_name')} | Đề xuất: {c.get('department')})"
+                for c in waiting_approve_list
             ]
             sel_appr_idx = st.selectbox(
-                "Chọn hồ sơ cần thẩm tra và phê duyệt:",
-                range(len(pending_approval_list)),
-                format_func=lambda i: approval_labels[i],
-                key="sel_director_approve_contract"
+                "Chọn hồ sơ cần xem xét và phê duyệt:",
+                range(len(waiting_approve_list)),
+                format_func=lambda i: appr_labels[i],
+                key="sel_contract_to_approve"
             )
-            appr_contract = pending_approval_list[sel_appr_idx]
+            appr_contract = waiting_approve_list[sel_appr_idx]
 
             st.markdown("---")
+            col_review_left, col_review_right = st.columns([1, 1])
 
-            # MÀN HÌNH CHIA 2 CỘT
-            col_pdf_left, col_review_right = st.columns([1.05, 0.95])
-
-            # ------------------------------------------------------------------
-            # CỘT TRÁI: HIỂN THỊ TRÌNH XEM PDF (<iframe>) ĐỐI CHIẾU LẠI NỘI DUNG HỢP ĐỒNG
-            # ------------------------------------------------------------------
-            with col_pdf_left:
-                st.markdown("#### 📄 Trình Xem Văn Bản Hợp Đồng (Đối Chiếu PDF)")
-                st.markdown(
-                    f"**Mã HĐ:** `{appr_contract.get('id')}` | **Trạng thái:** `{appr_contract.get('status')}`\n\n"
-                    f"**Tên hợp đồng:** **{appr_contract.get('title')}**\n\n"
-                    f"**Đối tác:** {appr_contract.get('partner_name')} | **Giá trị:** **{appr_contract.get('value_vnd', 0):,.0f} VNĐ**"
-                )
-
+            with col_review_left:
+                st.markdown("#### 📄 Xem Trực Tiếp Tệp Dự Thảo Hợp Đồng (Đối Chiếu)")
                 appr_attachments = appr_contract.get("attachments", [])
+
                 if not appr_attachments:
-                    st.warning("Hồ sơ này không có tài liệu PDF đính kèm để đối chiếu.")
+                    st.warning("Hồ sơ này không có tệp đính kèm nào được lưu trữ.")
                 else:
-                    att_appr_labels = [
+                    appr_att_labels = [
                         f"{i+1}. [{att.get('checklist_item', 'Tài liệu')}]: {att.get('file_name', 'document.pdf')}"
                         for i, att in enumerate(appr_attachments)
                     ]
                     chosen_appr_att_idx = st.selectbox(
-                        "Chọn tài liệu cần xem trước:",
+                        "Chọn tài liệu đính kèm để mở đọc đối chiếu:",
                         range(len(appr_attachments)),
-                        format_func=lambda i: att_appr_labels[i],
-                        key=f"appr_att_sel_{appr_contract.get('id')}"
+                        format_func=lambda i: appr_att_labels[i],
+                        key=f"sel_appr_att_{appr_contract.get('id')}"
                     )
                     chosen_appr_att = appr_attachments[chosen_appr_att_idx]
                     pdf_b64_str = chosen_appr_att.get("file_base64", "").strip()
 
-                    view_mode_appr = st.radio(
-                        "Chế độ xem văn bản:",
-                        ["📖 Trình đọc văn bản A4 sắc nét", "📑 Tệp gốc PDF (iFrame / Object)"],
-                        horizontal=True,
-                        key=f"mode_appr_pdf_{appr_contract.get('id')}"
-                    )
-
-                    if view_mode_appr == "📖 Trình đọc văn bản A4 sắc nét":
-                        # CHẾ ĐỘ 1: TRÌNH ĐỌC VĂN BẢN HỢP ĐỒNG A4 SẮC NÉT (CHỐNG LỖI SANDBOX BLOCKED IFRAME)
+                    if pdf_b64_str:
+                        clean_appr_b64 = pdf_b64_str
+                        if "base64," in clean_appr_b64:
+                            clean_appr_b64 = clean_appr_b64.split("base64,", 1)[1]
+                        clean_appr_b64 = "".join(clean_appr_b64.split())
+                        appr_data_uri = f"data:application/pdf;base64,{clean_appr_b64}"
                         att_fname = chosen_appr_att.get("file_name", "hop_dong.pdf")
-                        chk_item = chosen_appr_att.get("checklist_item", "Dự thảo hợp đồng")
-                        cfg_sys = get_config()
-                        comp_name = cfg_sys.get("company_name", "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU - ASIA HOLDINGS")
+
+                        try:
+                            pdf_raw_bytes = base64.b64decode(clean_appr_b64)
+                            att_fsize_kb = len(pdf_raw_bytes) / 1024
+                        except Exception:
+                            pdf_raw_bytes = None
+                            att_fsize_kb = chosen_appr_att.get("file_size", 0) / 1024
+
                         st.markdown(
                             f"""
-                            <div style="border-radius: 12px; border: 1.5px solid #CBD5E1; box-shadow: 0 4px 10px rgba(0,0,0,0.06); background-color: #F8FAFC; overflow: hidden; margin-top: 8px; margin-bottom: 8px;">
-                                <div style="background-color: #1E293B; color: #FFFFFF; padding: 8px 14px; font-size: 0.82rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                                    <span>📖 Văn bản đối chiếu: <b>{att_fname}</b></span>
-                                    <span style="color: #6EE7B7; font-size: 0.75rem; font-family: monospace;">Khổ chuẩn A4 • Sắc nét</span>
+                            <div style="border-radius: 10px; overflow: hidden; border: 1.5px solid #CBD5E1; background: #FFFFFF; margin-top: 8px; margin-bottom: 8px;">
+                                <div style="background-color: #F8FAFC; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">
+                                        📄 {att_fname} ({att_fsize_kb:.1f} KB) - Mục: [{chosen_appr_att.get('checklist_item')}]
+                                    </span>
+                                    <a href="{appr_data_uri}" target="_blank" download="{att_fname}" style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 3px 8px; border-radius: 4px; border: 1px solid #BFDBFE;">↗️ Tải / Mở tệp</a>
                                 </div>
-                                <div style="padding: 24px; background: #FFFFFF; max-height: 520px; min-height: 520px; overflow-y: auto; font-family: serif; color: #1E293B; border-top: 1px solid #E2E8F0; line-height: 1.6;">
-                                    <div style="text-align: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 12px;">
-                                        <div style="font-weight: 800; font-size: 0.85rem; text-transform: uppercase; color: #0F172A;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                                        <div style="font-weight: 700; font-size: 0.78rem; color: #334155;">Độc lập - Tự do - Hạnh phúc</div>
-                                        <div style="font-size: 0.75rem; color: #64748B; margin-top: 2px;">***</div>
-                                    </div>
-                                    <div style="text-align: center; margin-bottom: 14px;">
-                                        <h3 style="font-size: 1.05rem; font-weight: 800; text-transform: uppercase; color: #0F172A; margin: 0;">{appr_contract.get('title')}</h3>
-                                        <div style="font-size: 0.78rem; color: #64748B; font-family: sans-serif; margin-top: 4px;">
-                                            Số hiệu: <b>{appr_contract.get('id')}</b> | Phân loại: <b>{appr_contract.get('contract_type')}</b>
+                                <object data="{appr_data_uri}#toolbar=1" type="application/pdf" width="100%" height="480px" style="border: none; display: block;">
+                                    <embed src="{appr_data_uri}#toolbar=1" type="application/pdf" width="100%" height="480px" />
+                                    <iframe src="{appr_data_uri}" width="100%" height="480px" style="border: none;">
+                                        <div style="padding: 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
+                                            Tệp PDF tiếng Việt sẵn sàng.<br/>
+                                            <a href="{appr_data_uri}" download="{att_fname}" style="color: #2563EB; font-weight: bold;">Nhấp vào đây để tải tệp PDF về máy</a>
                                         </div>
-                                        <div style="font-size: 0.78rem; color: #2563EB; font-family: sans-serif; font-weight: 600; margin-top: 2px;">
-                                            Hạng mục hồ sơ: [{chk_item}]
-                                        </div>
-                                    </div>
-                                    <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 0.8rem; font-family: sans-serif; margin-bottom: 14px;">
-                                        <div><b>Bên đề xuất (Bên A):</b> {comp_name} - {appr_contract.get('department')}</div>
-                                        <div style="margin-top: 3px;"><b>Đối tác (Bên B):</b> <span style="color: #1E3A8A; font-weight: 700;">{appr_contract.get('partner_name')}</span></div>
-                                        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #CBD5E1; display: flex; justify-content: space-between; flex-wrap: wrap;">
-                                            <span>Giá trị hợp đồng: <b style="color: #047857;">{appr_contract.get('value_vnd', 0):,.0f} VNĐ</b></span>
-                                            <span>Thời hạn: <b>{appr_contract.get('effective_date')}</b> đến <b>{appr_contract.get('expiration_date')}</b></span>
-                                        </div>
-                                    </div>
-                                    <div style="font-size: 0.8rem; font-family: sans-serif; color: #334155;">
-                                        <p><b>Điều 1. Phạm vi công việc & Tài liệu đối chiếu:</b><br/>
-                                        Bên B cam kết cung cấp đúng chỉ tiêu kỹ thuật, danh mục được quy định tại phụ lục tệp <i>{att_fname}</i>, bảo đảm chất lượng và tiêu chuẩn hiện hành của Nhà nước Việt Nam.</p>
-                                        <p><b>Điều 2. Giá trị hợp đồng & Phương thức thanh toán:</b><br/>
-                                        Tổng giá trị hợp đồng là <b>{appr_contract.get('value_vnd', 0):,.0f} VNĐ</b> (đã bao gồm các loại thuế, phí hợp pháp). Thanh toán chuyển khoản theo từng đợt nghiệm thu thực tế.</p>
-                                        <p><b>Điều 3. Thẩm định Pháp lý & Điều khoản bảo hành:</b><br/>
-                                        Hồ sơ đã được Phòng Pháp chế rà soát và thông qua. Ý kiến chuyên môn ghi nhận: <i>"{appr_contract.get('legal_review', {}).get('summary_notes', 'Đảm bảo cân bằng quyền lợi và bảo vệ lợi ích công ty.')}"</i>.</p>
-                                    </div>
-                                    <div style="margin-top: 18px; padding-top: 12px; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; font-family: sans-serif; font-size: 0.78rem; text-align: center;">
-                                        <div style="width: 48%;">
-                                            <div style="font-weight: 700; color: #1E293B;">ĐẠI DIỆN ĐỐI TÁC (BÊN B)</div>
-                                            <div style="font-size: 0.72rem; color: #64748B; font-style: italic;">(Ký, đóng dấu điện tử)</div>
-                                            <div style="height: 48px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-style: italic;">[Đã ký điện tử]</div>
-                                            <div style="font-weight: 600; color: #334155;">{appr_contract.get('partner_name')}</div>
-                                        </div>
-                                        <div style="width: 48%;">
-                                            <div style="font-weight: 700; color: #1E293B;">GIÁM ĐỐC PHÁP CHẾ PHÊ DUYỆT</div>
-                                            <div style="font-size: 0.72rem; color: #64748B; font-style: italic;">(Ký duyệt ban hành)</div>
-                                            <div style="height: 48px; display: flex; align-items: center; justify-content: center;">
-                                                <span style="border: 1.5px solid #059669; color: #059669; background: #ECFDF5; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.68rem; text-transform: uppercase;">BAN GIÁM ĐỐC CHỜ DUYỆT</span>
-                                            </div>
-                                            <div style="font-weight: 600; color: #334155;">{current_fullname}</div>
-                                        </div>
-                                    </div>
-                                </div>
+                                    </iframe>
+                                </object>
                             </div>
                             """,
                             unsafe_allow_html=True
                         )
-                    else:
-                        # CHẾ ĐỘ 2: NHÚNG TỆP GỐC QUA OBJECT / EMBED / IFRAME BASE64
-                        if pdf_b64_str:
-                            raw_b64_clean = pdf_b64_str
-                            if "base64," in raw_b64_clean:
-                                raw_b64_clean = raw_b64_clean.split("base64,", 1)[1]
-                            raw_b64_clean = "".join(raw_b64_clean.split())
-                            missing_pad = len(raw_b64_clean) % 4
-                            if missing_pad:
-                                raw_b64_clean += "=" * (4 - missing_pad)
-                            pdf_data_url = f"data:application/pdf;base64,{raw_b64_clean}"
-                            att_fname = chosen_appr_att.get("file_name", "hop_dong.pdf")
 
-                            st.markdown(
-                                f"""
-                                <div style="border-radius: 10px; overflow: hidden; border: 1.5px solid #CBD5E1; background: #FFFFFF; margin-top: 8px; margin-bottom: 8px;">
-                                    <div style="background-color: #F8FAFC; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">
-                                            📑 {att_fname} - [{chosen_appr_att.get('checklist_item')}]
-                                        </span>
-                                        <a href="{pdf_data_url}" target="_blank" download="{att_fname}" style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 3px 8px; border-radius: 4px; border: 1px solid #BFDBFE;">↗️ Mở toàn màn hình</a>
-                                    </div>
-                                    <object data="{pdf_data_url}#toolbar=1" type="application/pdf" width="100%" height="520px" style="border: none; display: block;">
-                                        <embed src="{pdf_data_url}#toolbar=1" type="application/pdf" width="100%" height="520px" />
-                                        <iframe src="{pdf_data_url}" width="100%" height="520px" style="border: none;">
-                                            <div style="padding: 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
-                                                Văn bản hợp đồng sẵn sàng.<br/>
-                                                <a href="{pdf_data_url}" download="{att_fname}" style="color: #2563EB; font-weight: bold;">Nhấp vào đây để tải tệp PDF về máy</a>
-                                            </div>
-                                        </iframe>
-                                    </object>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
+                        if pdf_raw_bytes:
+                            st.download_button(
+                                label=f"📥 Tải tệp '{att_fname}' về máy",
+                                data=pdf_raw_bytes,
+                                file_name=att_fname,
+                                mime="application/pdf",
+                                key=f"dl_appr_att_{appr_contract.get('id')}_{chosen_appr_att_idx}",
+                                use_container_width=True
                             )
-                        else:
-                            st.info("Tài liệu không có nội dung base64.")
+                    else:
+                        st.info("Tài liệu không có nội dung base64.")
 
-                    # NÚT DOWNLOAD DỰ PHÒNG CHUẨN NATIVE STREAMLIT
-                    raw_clean = pdf_b64_str.split("base64,")[-1].strip().replace(" ", "").replace("\n", "").replace("\r", "")
-                    if len(raw_clean) % 4:
-                        raw_clean += "=" * (4 - len(raw_clean) % 4)
-                    try:
-                        pdf_raw_bytes = base64.b64decode(raw_clean)
-                    except Exception:
-                        pdf_raw_bytes = None
-
-                    att_fname = chosen_appr_att.get("file_name", "hop_dong.pdf")
-                    if pdf_raw_bytes:
-                        st.download_button(
-                            label=f"📥 Tải tệp '{att_fname}' về máy",
-                            data=pdf_raw_bytes,
-                            file_name=att_fname,
-                            mime="application/pdf",
-                            key=f"dl_appr_att_{appr_contract.get('id')}_{chosen_appr_att_idx}",
-                            use_container_width=True
-                        )
-
-            # ------------------------------------------------------------------
-            # CỘT PHẢI: TOÀN BỘ LỊCH SỬ Ý KIẾN GÓP Ý CỦA PHÁP CHẾ & 2 NÚT THAO TÁC
-            # ------------------------------------------------------------------
             with col_review_right:
                 st.markdown("#### ⚖️ Lịch Sử Thẩm Định & Ý Kiến Của Pháp Chế")
 
@@ -2261,7 +2075,6 @@ def director_view():
                         unsafe_allow_html=True
                     )
 
-                    # CHI TIẾT TỪNG MỤC CHECKLIST
                     st.markdown("##### 📋 Chi tiết đánh giá từng mục Checklist:")
                     chk_map = l_rev.get("checklist_results", {})
                     if chk_map:
@@ -2289,29 +2102,49 @@ def director_view():
 
                 dir_opinion = st.text_area(
                     "Ý kiến phê duyệt / Chỉ đạo ban hành:",
-                    value="Đồng ý thông qua nội dung dự thảo hợp đồng theo thẩm định của Phòng Pháp chế. Cho phép phát hành và tiến hành ký kết.",
+                    value="Đồng ý thông qua nội dung dự thảo hợp đồng theo thẩm định của Phòng Pháp chế. Cho phép phát hành và tiến hành ký kết." if not readonly else "Chế độ Giám sát Hệ thống (Read-Only) - Chỉ tra cứu hồ sơ và phiếu thẩm định.",
                     height=85,
+                    disabled=readonly,
                     key=f"dir_opinion_input_{appr_contract.get('id')}"
                 )
 
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
                 col_btn_approve, col_btn_reject = st.columns(2)
 
-                with col_btn_approve:
-                    btn_approve_action = st.button(
-                        "✅ Ký duyệt phát hành",
-                        type="primary",
-                        use_container_width=True,
-                        key=f"btn_approve_action_{appr_contract.get('id')}"
-                    )
+                if readonly:
+                    with col_btn_approve:
+                        st.button(
+                            "🔒 Ký duyệt phát hành (Disabled)",
+                            disabled=True,
+                            use_container_width=True,
+                            key=f"btn_approve_action_{appr_contract.get('id')}"
+                        )
+                    with col_btn_reject:
+                        st.button(
+                            "🔒 Yêu cầu làm lại (Disabled)",
+                            disabled=True,
+                            use_container_width=True,
+                            key=f"btn_reject_action_{appr_contract.get('id')}"
+                        )
+                    st.caption("🛡️ Quyền Read-Only: Admin chỉ có quyền tra cứu tài liệu và phiếu thẩm định, không được can thiệp workflow phê duyệt.")
+                    btn_approve_action = False
+                    btn_reject_action = False
+                else:
+                    with col_btn_approve:
+                        btn_approve_action = st.button(
+                            "✅ Ký duyệt phát hành",
+                            type="primary",
+                            use_container_width=True,
+                            key=f"btn_approve_action_{appr_contract.get('id')}"
+                        )
 
-                with col_btn_reject:
-                    btn_reject_action = st.button(
-                        "↩️ Yêu cầu làm lại",
-                        type="secondary",
-                        use_container_width=True,
-                        key=f"btn_reject_action_{appr_contract.get('id')}"
-                    )
+                    with col_btn_reject:
+                        btn_reject_action = st.button(
+                            "↩️ Yêu cầu làm lại",
+                            type="secondary",
+                            use_container_width=True,
+                            key=f"btn_reject_action_{appr_contract.get('id')}"
+                        )
 
                 # LOGIC XỬ LÝ KHI NHẤN NÚT
                 if btn_approve_action or btn_reject_action:
@@ -2319,7 +2152,6 @@ def director_view():
                     new_status = "Hoàn tất" if action_key == "approve" else "Đang rà soát"
                     pdf_filename = f"Phieu_gop_y_{appr_contract.get('id')}.pdf"
 
-                    # 1. DÙNG FPDF TẠO FILE PDF 'PHIẾU GÓP Ý HỢP ĐỒNG' (UNICODE FONT)
                     pdf_result_bytes = generate_review_pdf(
                         contract=appr_contract,
                         action_type=action_key,
@@ -2327,7 +2159,6 @@ def director_view():
                         director_name=current_fullname
                     )
 
-                    # 2. DÙNG SMTPLIB GỬI EMAIL TỰ ĐỘNG ĐÍNH KÈM FILE PDF
                     email_ok, email_msg = send_approval_email(
                         contract=appr_contract,
                         pdf_bytes=pdf_result_bytes,
@@ -2336,7 +2167,6 @@ def director_view():
                         director_notes=dir_opinion.strip()
                     )
 
-                    # 3. CẬP NHẬT TRẠNG THÁI HỢP ĐỒNG & LƯU LẠI CONTRACTS.JSON
                     appr_contract["status"] = new_status
                     appr_contract["director_approval"] = {
                         "approved_by": current_username,
@@ -2366,7 +2196,7 @@ def director_view():
                         else:
                             st.info(f"📧 {email_msg}")
 
-                # 4. HIỆN NÚT ST.DOWNLOAD_BUTTON TẢI FILE PDF TRÊN GIAO DIỆN
+                # HIỆN NÚT TẢI FILE PDF TRÊN GIAO DIỆN (HOẠT ĐỘNG TRÊN CẢ READ-ONLY VÀ GIÁM ĐỐC)
                 stored_pdf = st.session_state.get(f"last_gen_pdf_{appr_contract.get('id')}")
                 stored_pdf_name = st.session_state.get(f"last_gen_pdf_name_{appr_contract.get('id')}", f"Phieu_gop_y_{appr_contract.get('id')}.pdf")
 
@@ -2390,14 +2220,15 @@ def director_view():
                 )
 
 # ==============================================================================
-# 11. ĐIỀU HƯỚNG TỔNG THỂ & RENDER_MAIN_DASHBOARD()
+# 12. ĐIỀU HƯỚNG TỔNG THỂ & RENDER_MAIN_DASHBOARD() (SIDEBAR ISOLATION)
 # ==============================================================================
 def render_main_dashboard():
     display_branding()
 
     current_user = st.session_state.get("user", {})
-    user_role = current_user.get("role", "")
-    user_dept = current_user.get("department", "")
+    user_role = st.session_state.get("role") or current_user.get("role", "Phòng ban đề nghị")
+    st.session_state["role"] = user_role
+    user_dept = current_user.get("department", "Chưa phân bổ")
 
     st.sidebar.markdown(
         f"""
@@ -2418,57 +2249,74 @@ def render_main_dashboard():
 
     st.sidebar.markdown("---")
 
-    menu_options = []
-    # Ban Giám đốc hoặc Admin hoặc Giám đốc Pháp chế
-    if user_role in ["Ban Giám đốc", "Admin", "Giám đốc Pháp chế"]:
-        menu_options.append("👑 Quản trị Giám đốc (director_view)")
+    # ==========================================================================
+    # MENU ĐIỀU HƯỚNG ĐỘC LẬP THEO VAI TRÒ (SIDEBAR ISOLATION)
+    # Dựa vào st.session_state['role'], CHỈ hiển thị các chức năng thuộc về Role đó.
+    # Tuyệt đối không dùng chung một menu chọn cho tất cả.
+    # ==========================================================================
+    if user_role == "Admin":
+        menu_options = [
+            "Quản trị hệ thống",
+            "Cấu hình quy trình",
+            "Giám sát Hệ thống (Read-Only)"
+        ]
+    elif user_role in ["Giám đốc Pháp chế", "Ban Giám đốc", "Giám đốc"]:
+        menu_options = [
+            "Phân công",
+            "Phê duyệt",
+            "Dashboard"
+        ]
+    elif user_role in ["Nhân viên Pháp chế", "Phó Phòng Pháp chế", "Chuyên viên Pháp chế", "Pháp chế"]:
+        menu_options = [
+            "Hồ sơ đang rà soát",
+            "Lịch sử"
+        ]
+    else:  # Phòng ban đề nghị
+        menu_options = [
+            "Trình hồ sơ mới",
+            "Theo dõi hồ sơ"
+        ]
 
-    # Nhân sự Phòng Pháp chế hoặc Admin
-    if user_role in ["Pháp chế", "Chuyên viên Pháp chế", "Giám đốc Pháp chế", "Phó Phòng Pháp chế", "Nhân viên Pháp chế", "Admin", "Ban Giám đốc"]:
-        menu_options.append("⚖️ Bàn làm việc Pháp chế (legal_staff_view)")
-        menu_options.append("📑 Cấu hình Checklist (workflow_config_view)")
+    st.sidebar.markdown(f"#### 🧭 Menu Chức Năng ({user_role})")
+    choice = st.sidebar.radio("CHỌN CHỨC NĂNG:", menu_options, key="isolated_sidebar_nav")
 
-
-    # Phòng ban đề nghị
-    menu_options.append("📤 Cổng nộp hồ sơ (department_view)")
-
-    # Admin
-    if user_role in ["Admin", "Ban Giám đốc"]:
-        menu_options.append("⚙️ Quản trị Admin (admin_view)")
-
-    menu_options.append("📊 Tổng quan hệ thống")
-
-    choice = st.sidebar.radio("CHỨC NĂNG HỆ THỐNG", menu_options)
-
-    if choice == "👑 Quản trị Giám đốc (director_view)":
-        director_view()
-    elif choice == "⚖️ Bàn làm việc Pháp chế (legal_staff_view)":
-        legal_staff_view()
-    elif choice == "📤 Cổng nộp hồ sơ (department_view)":
-        department_view()
-    elif choice == "⚙️ Quản trị Admin (admin_view)":
+    # 1. ADMIN
+    if choice == "Quản trị hệ thống":
         admin_view()
-    elif choice == "📑 Cấu hình Checklist (workflow_config_view)":
+    elif choice == "Cấu hình quy trình":
         workflow_config_view()
-    elif choice == "📊 Tổng quan hệ thống":
-        st.title("📊 Tổng Quan Toàn Hệ Thống")
-        contracts_data = get_contracts()
-        m1, m2, m3, m4 = st.columns(4)
-        with m1: st.metric("Tổng Hợp đồng", len(contracts_data))
-        with m2: st.metric("Phòng ban", len(get_departments()))
-        with m3: st.metric("Quy trình", len(get_workflows()))
-        with m4: st.metric("Người dùng", len(get_users()))
-        if contracts_data:
-            df = pd.DataFrame(contracts_data)
-            st.dataframe(df[["id", "title", "partner_name", "value_vnd", "status", "assigned_to"]], use_container_width=True)
+    elif choice == "Giám sát Hệ thống (Read-Only)":
+        director_view(readonly=True, active_tab="dashboard")
+
+    # 2. GIÁM ĐỐC PHÁP CHẾ
+    elif choice == "Phân công":
+        director_view(readonly=False, active_tab="assign")
+    elif choice == "Phê duyệt":
+        director_view(readonly=False, active_tab="approve")
+    elif choice == "Dashboard":
+        director_view(readonly=False, active_tab="dashboard")
+
+    # 3. NHÂN VIÊN PHÁP CHẾ
+    elif choice == "Hồ sơ đang rà soát":
+        legal_staff_view(active_tab="reviewing")
+    elif choice == "Lịch sử":
+        legal_staff_view(active_tab="history")
+
+    # 4. PHÒNG BAN ĐỀ NGHỊ
+    elif choice == "Trình hồ sơ mới":
+        department_view(active_tab="submit")
+    elif choice == "Theo dõi hồ sơ":
+        department_view(active_tab="tracking")
 
 # ==============================================================================
-# 11. ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
+# 13. ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
 # ==============================================================================
 def main():
     if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
         render_login_screen()
     else:
+        if "role" not in st.session_state or not st.session_state["role"]:
+            st.session_state["role"] = st.session_state.get("user", {}).get("role", "Phòng ban đề nghị")
         render_main_dashboard()
 
 if __name__ == "__main__":
