@@ -112,12 +112,13 @@ def apply_custom_css():
 apply_custom_css()
 
 # ==============================================================================
-# 3. NHẬN DIỆN THƯƠNG HIỆU DOANH NGHIỆP TRÊN SIDEBAR
 # ==============================================================================
-def display_branding():
+# 3. NHẬN DIỆN THƯƠNG HIỆU DOANH NGHIỆP TRÊN SIDEBAR & TRANG ĐĂNG NHẬP
+# ==============================================================================
+def display_branding(in_sidebar: bool = True):
     system_config = get_config()
-    company_name = system_config.get("company_name", "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU")
-    short_name = system_config.get("short_name", "ASIA HOLDINGS")
+    company_name = system_config.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
+    short_name = system_config.get("short_name", "CNS")
     logo_b64 = system_config.get("logo_base64", DEFAULT_LOGO_SVG_B64).strip()
     system_version = system_config.get("system_version", "1.0.0")
 
@@ -130,35 +131,56 @@ def display_branding():
         except Exception:
             image_src = f"data:image/svg+xml;base64,{logo_b64}"
 
-    st.sidebar.markdown(
-        f"""
-        <div style="text-align: center; padding: 10px 4px 18px 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 16px;">
-            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 8px;">
-                <img src="{image_src}" alt="Logo Công ty" style="height: 56px; width: 56px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.06);" />
+    if in_sidebar:
+        st.sidebar.markdown(
+            f"""
+            <div style="text-align: center; padding: 10px 4px 18px 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 8px;">
+                    <img src="{image_src}" alt="Logo Công ty" style="height: 56px; width: 56px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.06);" />
+                </div>
+                <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
+                <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; line-height: 1.3; margin-top: 3px;">{company_name}</div>
+                <div style="display: inline-block; margin-top: 8px; font-size: 0.70rem; padding: 2px 10px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
+                    QUẢN TRỊ HỢP ĐỒNG v{system_version}
+                </div>
             </div>
-            <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
-            <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; line-height: 1.3; margin-top: 3px;">{company_name}</div>
-            <div style="display: inline-block; margin-top: 8px; font-size: 0.70rem; padding: 2px 10px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
-                QUẢN TRỊ HỢP ĐỒNG v{system_version}
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"""
+            <div style="text-align: center; padding: 20px 16px; margin-bottom: 20px; background: #FFFFFF; border-radius: 16px; border: 1.5px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <img src="{image_src}" alt="Logo Doanh nghiệp" style="height: 72px; width: 72px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);" />
+                </div>
+                <div style="font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
+                <h3 style="color: #0F172A; font-size: 1.15rem; font-weight: 800; margin-top: 4px; margin-bottom: 6px; line-height: 1.35;">{company_name}</h3>
+                <div style="display: inline-block; font-size: 0.75rem; padding: 3px 12px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE; margin-bottom: 4px;">
+                    HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG v{system_version}
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            """,
+            unsafe_allow_html=True
+        )
 
 # ==============================================================================
 # 4. LOGIC XÁC THỰC & ĐĂNG NHẬP
 # ==============================================================================
 def render_login_screen():
+    # Hiển thị Logo & Thương hiệu trên Sidebar ngay cả khi chưa đăng nhập
+    display_branding(in_sidebar=True)
+
     col_left, col_center, col_right = st.columns([1, 1.8, 1])
     with col_center:
-        st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+        # Hiển thị Logo và Thông tin Doanh nghiệp mới nhất ngay phía trên Form Đăng nhập
+        display_branding(in_sidebar=False)
+
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 42px;">🏢</span>
-                <h2 style="color: #1E3A8A; margin-top: 8px; margin-bottom: 4px;">HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG</h2>
-                <p style="color: #64748B; font-size: 0.92rem;">Cổng đăng nhập an toàn dành cho cán bộ nhân viên nội bộ</p>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <p style="color: #64748B; font-size: 0.90rem; margin: 0;">Cổng đăng nhập an toàn dành cho cán bộ nhân viên nội bộ</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -180,8 +202,8 @@ def render_login_screen():
                 default_pwd = matched.get("password", "")
 
         with st.form("form_dang_nhap", clear_on_submit=False):
-            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / giamdoc / giamdoc01 / phapche01")
-            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / 123456 / gd123 / pc123")
+            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / pche_giamdoc / pche_nhanvien1")
+            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / 123456 / pc123")
             submit_login = st.form_submit_button("Đăng nhập hệ thống", use_container_width=True)
 
             if submit_login:
@@ -189,7 +211,7 @@ def render_login_screen():
                 p_input = password_val.strip()
 
                 # Kiểm tra danh sách người dùng trong hệ thống
-                matched_account = next((u for u in user_list if u.get("username") == u_input and u.get("password") == p_input), None)
+                matched_account = next((u for u in user_list if u.get("username") == u_input and str(u.get("password")) == p_input), None)
 
                 # Fallback bảo đảm đặc quyền Admin và Ban Giám đốc luôn đăng nhập thành công
                 if not matched_account:
@@ -199,23 +221,23 @@ def render_login_screen():
                             "full_name": "Quản trị viên Hệ thống",
                             "role": "Admin",
                             "department": "Ban Giám đốc",
-                            "email": "admin@congty.com.vn"
+                            "email": "info@cns.com.vn"
                         }
-                    elif u_input in ["giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
+                    elif u_input in ["pche_giamdoc", "giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
                         matched_account = {
-                            "username": "giamdoc01",
-                            "full_name": "Trần Quang Thắng",
+                            "username": "pche_giamdoc",
+                            "full_name": "Lê Thị Phương",
                             "role": "Ban Giám đốc",
-                            "department": "Ban Giám đốc",
-                            "email": "thang.tq@congty.com.vn"
+                            "department": "Phòng Pháp chế",
+                            "email": "phuonglt@cns.com.vn"
                         }
-                    elif u_input == "phapche01" and p_input == "pc123":
+                    elif u_input in ["pche_nhanvien1", "phapche01"] and p_input in ["pc123"]:
                         matched_account = {
-                            "username": "phapche01",
-                            "full_name": "Nguyễn Văn Luật",
+                            "username": "pche_nhanvien1",
+                            "full_name": "Nguyễn Kim An",
                             "role": "Chuyên viên Pháp chế",
                             "department": "Phòng Pháp chế",
-                            "email": "luat.nv@congty.com.vn"
+                            "email": "annk@cns.com.vn"
                         }
 
                 if matched_account:
@@ -232,9 +254,9 @@ def render_login_screen():
             <div style="margin-top: 20px; padding: 14px 16px; background-color: #F1F5F9; border-radius: 10px; border-left: 4px solid #3B82F6; font-size: 0.85rem; color: #334155;">
                 <strong>Danh sách tài khoản dùng thử hệ thống:</strong><br/>
                 • <b>Quản trị viên (Admin):</b> <code>admin</code> / <code>admin123</code><br/>
-                • <b>Ban Giám đốc:</b> <code>giamdoc</code> (<code>123456</code>) hoặc <code>giamdoc01</code> (<code>gd123</code>)<br/>
-                • <b>Chuyên viên Pháp chế:</b> <code>phapche01</code> / <code>pc123</code><br/>
-                • <b>Phòng ban đề xuất:</b> <code>kinhdoanh01</code> / <code>kd123</code>
+                • <b>Ban Giám đốc:</b> <code>pche_giamdoc</code> (<code>123456</code>)<br/>
+                • <b>Chuyên viên Pháp chế:</b> <code>pche_nhanvien1</code> / <code>pc123</code><br/>
+                • <b>Chuyên viên Pháp chế 2:</b> <code>pche_nhanvien2</code> / <code>pc123</code>
             </div>
             """,
             unsafe_allow_html=True
@@ -250,7 +272,7 @@ def logout_user():
 # 5. ĐIỀU HƯỚNG TỔNG THỂ & RENDER_MAIN_DASHBOARD()
 # ==============================================================================
 def render_main_dashboard():
-    display_branding()
+    display_branding(in_sidebar=True)
 
     current_user = st.session_state.get("user", {})
     user_role = st.session_state.get("role") or current_user.get("role", "Phòng ban đề nghị")
