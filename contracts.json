@@ -1,0 +1,170 @@
+[
+  {
+    "id": "HD-2026-001",
+    "title": "Hợp đồng Cung cấp Dịch vụ Điện toán Đám mây Doanh nghiệp",
+    "partner_name": "Công ty Cổ phần Công nghệ Sao Nam",
+    "contract_type": "Hợp đồng Thương mại & Dịch vụ",
+    "value_vnd": 245000000,
+    "created_by": "kinhdoanh01",
+    "department": "Phòng Kinh doanh & Tiếp thị",
+    "workflow_id": "WF_COMMERCIAL",
+    "current_step": 2,
+    "status": "Đang rà soát",
+    "assigned_to": "phapche01",
+    "effective_date": "2026-04-01",
+    "expiration_date": "2027-03-31",
+    "created_at": "2026-03-15 09:30:00",
+    "notes": "Hợp đồng hạ tầng số ưu tiên triển khai quý 2. Cần rà soát kỹ điều khoản SLA và phạt vi phạm.",
+    "attachments": [
+      {
+        "checklist_item": "Dự thảo Hợp đồng chi tiết",
+        "file_name": "du_thao_hop_dong_saonam.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihIT1AgRE9ORyBDVU5HIENBUCBESUNIIFZVIFNPLSAyMDI2KSBUagovRjEgMTIgVGYKMCAtMzAgVGQKKEJlbiBBOiBUYXAgZG9hbiBBc2lhIEhvbGRpbmdzKSBUagowIC0yMCBUZgooQmVuIEI6IENvbmcgdHkgQ1AgQ29uZyBuZ2hlIFNhbyBOYW0pIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNyAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjEgMCBvYmoKPDwKL1BhZ2VzIDQgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDA1MjggMDAwMDAgbiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA3OSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzYKJSVFT0Y="
+      },
+      {
+        "checklist_item": "Giấy chứng nhận Đăng ký kinh doanh đối tác",
+        "file_name": "dkkd_saonam_2026.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihHSUFZIERSWVUgREFORyBLWSBLSU5IIERPQU5IKSBUagovRjEgMTIgVGYKMCAtMzAgVGQKKE1hIHNvIGRvYW5oIG5naGllcDpsIDAxMDI5Mzg4NDgpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNyAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjEgMCBvYmoKPDwKL1BhZ2VzIDQgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDA1MjggMDAwMDAgbiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA3OSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzYKJSVFT0Y="
+      }
+    ]
+  },
+  {
+    "id": "HD-2026-002",
+    "title": "Hợp đồng Thuê Văn phòng Đại diện Chi nhánh HCM",
+    "partner_name": "Tập đoàn Bất động sản Bitexco",
+    "contract_type": "Hợp đồng Thuê Tài sản & Văn phòng",
+    "value_vnd": 680000000,
+    "created_by": "admin",
+    "department": "Ban Giám đốc",
+    "workflow_id": "WF_LEASE",
+    "current_step": 1,
+    "status": "Chờ Giám đốc phân công",
+    "assigned_to": "",
+    "effective_date": "2026-05-01",
+    "expiration_date": "2028-04-30",
+    "created_at": "2026-03-20 14:15:00",
+    "notes": "Đã hoàn tất khảo sát mặt bằng tầng 12",
+    "attachments": [
+      {
+        "checklist_item": "Dự thảo Hợp đồng thuê mặt bằng",
+        "file_name": "du_thao_thue_van_phong_bitexco.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihIT1AgRE9ORyBUSFVFIExPQyBUSUVOIFZBTiBQSENORykgVGoKMCAtMzAgVGQKKEJpdGV4Y28gR3JvdXAgLSBBc2lhIEhvbGRpbmdzKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjcgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCi9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nCj4+CmVuZG9iagoxIDAgb2JqCjw8Ci9QYWdlcyA0IDAgUgovVHlwZSAvQ2F0YWxvZwo+PgplbmRvYmoKeHJlZgowIDgKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwNTI4IDAwMDAwIG4gCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNzkgMDAwMDAgbiAKMDAwMDAwMDI0OSAwMDAwMCBuIAowMDAwMDAwNDI5IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgOAovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNTc2CiUlRU9G"
+      },
+      {
+        "checklist_item": "Giấy chứng nhận Quyền sở hữu mặt bằng",
+        "file_name": "giay_to_phap_ly_toa_nha_bitexco.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihHSUFZIFRPIFBIQVAgTFkgVE9BIE5IQSBWSUVUIE5BTTIpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNyAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjEgMCBvYmoKPDwKL1BhZ2VzIDQgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDA1MjggMDAwMDAgbiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA3OSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzYKJSVFT0Y="
+      }
+    ]
+  },
+  {
+    "id": "HD-2026-003",
+    "title": "Hợp đồng Mua sắm Máy chủ và Thiết bị Mạng Chi nhánh",
+    "partner_name": "Công ty TNHH Thiết bị Số Phong Vũ",
+    "contract_type": "Hợp đồng Mua sắm & Thiết bị",
+    "value_vnd": 125000000,
+    "created_by": "kinhdoanh01",
+    "department": "Phòng Kinh doanh & Tiếp thị",
+    "workflow_id": "WF_PROCUREMENT",
+    "current_step": 3,
+    "status": "Chờ Giám đốc duyệt",
+    "assigned_to": "phapche01",
+    "effective_date": "2026-03-10",
+    "expiration_date": "2026-12-31",
+    "created_at": "2026-03-08 10:00:00",
+    "notes": "Đã hoàn tất rà soát điều khoản bảo hành.",
+    "attachments": [
+      {
+        "checklist_item": "Dự thảo Hợp đồng mua sắm",
+        "file_name": "du_thao_phongvu_2026.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihIT1AgRE9ORyBNVUEgU0FNIFRISUVUIEJJKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjcgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCi9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nCj4+CmVuZG9iagoxIDAgb2JqCjw8Ci9QYWdlcyA0IDAgUgovVHlwZSAvQ2F0YWxvZwo+PgplbmRvYmoKeHJlZgowIDgKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwNTI4IDAwMDAwIG4gCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNzkgMDAwMDAgbiAKMDAwMDAwMDI0OSAwMDAwMCBuIAowMDAwMDAwNDI5IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgOAovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNTc2CiUlRU9G"
+      }
+    ],
+    "legal_review": {
+      "reviewer": "phapche01",
+      "reviewer_name": "Nguyễn Văn Luật",
+      "reviewed_at": "2026-03-22 16:45:00",
+      "general_assessment": "Đủ điều kiện pháp lý - Đề xuất ký",
+      "summary_notes": "Hợp đồng đã được chỉnh sửa điều khoản thời hạn bảo hành thành 24 tháng theo đúng yêu cầu nội bộ. Không phát hiện rủi ro nghiêm trọng.",
+      "checklist_results": {
+        "Báo giá so sánh tối thiểu 3 nhà cung cấp": {
+          "status": "Đạt",
+          "comment": "Đã đủ 3 báo giá từ Phong Vũ, Hanoicomputer và FPT Shop."
+        },
+        "Biên bản họp hội đồng mua sắm": {
+          "status": "Đạt",
+          "comment": "Đã có chữ ký của Chủ tịch hội đồng mua sắm."
+        },
+        "Dự thảo Hợp đồng mua sắm": {
+          "status": "Có góp ý",
+          "comment": "Đã bổ sung điều khoản phạt vi phạm giao hàng chậm 0.5%/ngày."
+        },
+        "Tài liệu khác": {
+          "status": "Đạt",
+          "comment": "Đầy đủ giấy ủy quyền ký kết của đối tác."
+        }
+      }
+    }
+  },
+  {
+    "id": "HD-2026-004",
+    "title": "Hợp đồng Hợp tác Kinh doanh & Phân phối Phần mềm",
+    "partner_name": "Công ty Cổ phần Giải pháp Số VinaSoft",
+    "contract_type": "Hợp đồng Thương mại & Dịch vụ",
+    "value_vnd": 520000000,
+    "created_by": "kinhdoanh01",
+    "department": "Phòng Kinh doanh & Tiếp thị",
+    "workflow_id": "WF_COMMERCIAL",
+    "current_step": 2,
+    "status": "Đang rà soát",
+    "assigned_to": "phapche02",
+    "effective_date": "2026-05-01",
+    "expiration_date": "2027-04-30",
+    "created_at": "2026-04-02 08:30:00",
+    "notes": "Hợp đồng phân phối chiến lược khu vực miền Bắc. Cần thẩm định kỹ điều khoản độc quyền.",
+    "attachments": [
+      {
+        "checklist_item": "Dự thảo Hợp đồng chi tiết",
+        "file_name": "du_thao_hop_dong_vinasoft.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihIT1AgRE9ORyBIT1AgVEFDIEtJTkggRE9BTkgpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNyAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjEgMCBvYmoKPDwKL1BhZ2VzIDQgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDA1MjggMDAwMDAgbiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA3OSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzYKJSVFT0Y="
+      },
+      {
+        "checklist_item": "Báo giá chính thức & Thỏa thuận thương mại",
+        "file_name": "bao_gia_phan_phoi_vinasoft.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihCQU8gR0lBIENISU5HIFRIUUMgLSAyMDI2KSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCjcgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCi9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nCj4+CmVuZG9iagoxIDAgb2JqCjw8Ci9QYWdlcyA0IDAgUgovVHlwZSAvQ2F0YWxvZwo+PgplbmRvYmoKeHJlZgowIDgKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwNTI4IDAwMDAwIG4gCjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNzkgMDAwMDAgbiAKMDAwMDAwMDI0OSAwMDAwMCBuIAowMDAwMDAwNDI5IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgOAovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNTc2CiUlRU9G"
+      }
+    ]
+  },
+  {
+    "id": "HD-2026-005",
+    "title": "Hợp đồng Tư vấn Thiết kế và Triển khai Hệ thống ERP",
+    "partner_name": "Tập đoàn Công nghệ FPT",
+    "contract_type": "Hợp đồng Thương mại & Dịch vụ",
+    "value_vnd": 890000000,
+    "created_by": "kinhdoanh01",
+    "department": "Phòng Kinh doanh & Tiếp thị",
+    "workflow_id": "WF_COMMERCIAL",
+    "current_step": 2,
+    "status": "Đang rà soát",
+    "assigned_to": "phapche01",
+    "effective_date": "2026-06-01",
+    "expiration_date": "2027-05-31",
+    "created_at": "2026-04-05 10:15:00",
+    "notes": "Dự án chuyển đổi số trọng điểm của Tập đoàn.",
+    "attachments": [
+      {
+        "checklist_item": "Dự thảo Hợp đồng chi tiết",
+        "file_name": "du_thao_hop_dong_erp_fpt.pdf",
+        "file_size": 584,
+        "file_base64": "JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwKL0tpZHMgWzUgMCBSXQovQ291bnQgMQovVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL1BhcmVudCA0IDAgUgovQ29udGVudHMgNiAwIFIKL1R5cGUgL1BhZ2UKL1Jlc291cmNlcyA8PAovUHJvY1NldCBbL1BERiAvVGV4dF0KL0ZvbnQgPDwKL0YxIDcgMCBSCj4+Cj4+Ci9NZWRpYUJveCBbMCAwIDU5NSA4NDJdCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9MZW5ndGggMTI4Cj4+CnN0cmVhbQpCVAovRjEgMTggVGYKNjAgNzYwIFRkCihIT1AgRE9ORyBUSUVUIEtIRSBFUlAgRlBUIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNyAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjEgMCBvYmoKPDwKL1BhZ2VzIDQgMCBSCi9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDA1MjggMDAwMDAgbiAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA3OSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDA0MjkgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA4Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo1NzYKJSVFT0Y="
+      }
+    ]
+  }
+]
