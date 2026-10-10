@@ -271,6 +271,10 @@ def admin_view():
 
     with tab_sys_config:
         st.subheader("🌐 Cấu Hình Nhận Diện Doanh Nghiệp & Email Gửi Đi")
+        if st.session_state.get("config_save_success"):
+            st.success("Cập nhật thông tin doanh nghiệp thành công!")
+            del st.session_state["config_save_success"]
+
         cfg = get_config()
         smtp_cfg = cfg.get("smtp_settings", {})
         col_c1, col_c2 = st.columns(2)
@@ -293,7 +297,8 @@ def admin_view():
             cfg["company_name"], cfg["short_name"], cfg["company_address"], cfg["logo_base64"] = cfg_comp_name.strip(), cfg_short.strip(), cfg_addr.strip(), active_logo_b64
             cfg["smtp_settings"] = {"server": cfg_smtp_host.strip(), "port": int(cfg_smtp_port), "sender_email": cfg_sender.strip(), "app_password": cfg_app_pwd.strip(), "use_tls": True}
             save_config(cfg)
-            st.success("Đã lưu cấu hình vào config.json thành công!")
+            st.session_state["config_save_success"] = True
+            st.success("Cập nhật thông tin doanh nghiệp thành công!")
             st.rerun()
 
 
