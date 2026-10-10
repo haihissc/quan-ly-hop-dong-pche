@@ -1,32 +1,32 @@
 [
   {
     "id": "DEPT_BGĐ",
-    "name": "Ban Giám đốc",
+    "name": "Quản trị viên",
     "manager": "Quản trị viên Hệ thống",
-    "email": "bod@asiaholdings.vn"
+    "email": "info@cns.com.vn"
   },
   {
     "id": "DEPT_PC",
     "name": "Phòng Pháp chế",
-    "manager": "Nguyễn Văn Luật",
-    "email": "legal@asiaholdings.vn"
+    "manager": "Lê Thị Phương",
+    "email": "phuonglt@cns.com.vn"
   },
   {
     "id": "DEPT_KT",
-    "name": "Phòng Kế toán - Tài chính",
-    "manager": "Trần Thị Thu",
-    "email": "finance@asiaholdings.vn"
+    "name": "Phòng Tài chính - Kế toán",
+    "manager": "Phạm Thị Thu Hà",
+    "email": "haptt@cns.com.vn"
   },
   {
     "id": "DEPT_KD",
-    "name": "Phòng Kinh doanh & Tiếp thị",
-    "manager": "Lê Hoàng Nam",
-    "email": "sales@asiaholdings.vn"
+    "name": "Phòng Kinh doanh",
+    "manager": "Nguyễn Phương Yến Linh",
+    "email": "linhnpy@cns.com.vn"
   },
   {
     "id": "DEPT_NS",
-    "name": "Phòng Nhân sự - Hành chính",
-    "manager": "Phạm Hồng Hạnh",
-    "email": "hr@asiaholdings.vn"
+    "name": "Phòng Nhân sự",
+    "manager": "Huỳnh Thị Lan Hương",
+    "email": "huonghtl@cns.com.vn"
   }
 ]
