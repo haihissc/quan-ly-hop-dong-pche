@@ -4,18 +4,18 @@
     "password": "admin123",
     "full_name": "Quản trị viên Hệ thống",
     "role": "Admin",
-    "department": "Ban Giám đốc",
-    "email": "admin@congty.com.vn",
+    "department": "Quản trị viên Hệ thống",
+    "email": "info@cns.com.vn",
     "status": "active",
-    "zalo": "0901234567"
+    "zalo": "0937000387"
   },
   {
-    "username": "giamdoc",
+    "username": "pche_giamdoc",
     "password": "123456",
-    "full_name": "Trần Quang Thắng (Giám đốc)",
+    "full_name": "Lê Thị Phương",
     "role": "Ban Giám đốc",
-    "department": "Ban Giám đốc",
-    "email": "thang.tq@congty.com.vn",
+    "department": "Phòng Pháp chế",
+    "email": "phuonglt@cns.com.vn",
     "status": "active",
     "zalo": "0901234567"
   },
@@ -30,22 +30,22 @@
     "zalo": "0901234567"
   },
   {
-    "username": "phapche01",
+    "username": "pche_nhanvien1",
     "password": "pc123",
-    "full_name": "Nguyễn Văn Luật",
+    "full_name": "Nguyễn Kim An",
     "role": "Chuyên viên Pháp chế",
     "department": "Phòng Pháp chế",
-    "email": "luat.nv@congty.com.vn",
+    "email": "annk@cns.com.vn",
     "status": "active",
     "zalo": "0901234567"
   },
   {
-    "username": "phapche02",
-    "password": "pc456",
-    "full_name": "Lê Thị Mai",
+    "username": "pche_nhanvien2",
+    "password": "pc123",
+    "full_name": "Cao Trung Hiếu",
     "role": "Chuyên viên Pháp chế",
     "department": "Phòng Pháp chế",
-    "email": "mai.lt@congty.com.vn",
+    "email": "hieuct@cns.com.vn",
     "status": "active",
     "zalo": "0901234567"
   },
