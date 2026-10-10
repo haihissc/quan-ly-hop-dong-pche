@@ -6,7 +6,18 @@
     "role": "Admin",
     "department": "Ban Giám đốc",
     "email": "admin@congty.com.vn",
-    "status": "active"
+    "status": "active",
+    "zalo": "0901234567"
+  },
+  {
+    "username": "giamdoc",
+    "password": "123456",
+    "full_name": "Trần Quang Thắng (Giám đốc)",
+    "role": "Ban Giám đốc",
+    "department": "Ban Giám đốc",
+    "email": "thang.tq@congty.com.vn",
+    "status": "active",
+    "zalo": "0901234567"
   },
   {
     "username": "giamdoc01",
@@ -15,7 +26,8 @@
     "role": "Ban Giám đốc",
     "department": "Ban Giám đốc",
     "email": "thang.tq@congty.com.vn",
-    "status": "active"
+    "status": "active",
+    "zalo": "0901234567"
   },
   {
     "username": "phapche01",
@@ -24,7 +36,28 @@
     "role": "Chuyên viên Pháp chế",
     "department": "Phòng Pháp chế",
     "email": "luat.nv@congty.com.vn",
-    "status": "active"
+    "status": "active",
+    "zalo": "0901234567"
+  },
+  {
+    "username": "phapche02",
+    "password": "pc456",
+    "full_name": "Lê Thị Mai",
+    "role": "Chuyên viên Pháp chế",
+    "department": "Phòng Pháp chế",
+    "email": "mai.lt@congty.com.vn",
+    "status": "active",
+    "zalo": "0901234567"
+  },
+  {
+    "username": "ketoan01",
+    "password": "kt123",
+    "full_name": "Trần Thị Thu",
+    "role": "Kế toán trưởng",
+    "department": "Phòng Kế toán - Tài chính",
+    "email": "thu.tt@congty.com.vn",
+    "status": "active",
+    "zalo": "0901234567"
   },
   {
     "username": "kinhdoanh01",
@@ -33,6 +66,7 @@
     "role": "Phòng ban đề nghị",
     "department": "Phòng Kinh doanh & Tiếp thị",
     "email": "nam.lh@congty.com.vn",
-    "status": "active"
+    "status": "active",
+    "zalo": "0901234567"
   }
 ]
