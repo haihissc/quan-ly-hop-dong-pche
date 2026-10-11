@@ -134,7 +134,7 @@ def legal_staff_view(active_tab: str = None):
                 <div style="margin-top: 10px; padding: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 0.85rem; color: #475569;">
                     💡 <b>Gợi ý kiểm tra:</b><br/>
                     • Vào <b>👑 Quản trị Giám đốc (director_view) -> Tab 2: Phân công hồ sơ</b> để giao việc cho chuyên viên.<br/>
-                    • Đăng nhập tài khoản <code>phapche01</code> (Mật khẩu: <code>pc123</code>) hoặc <code>phapche02</code> (Mật khẩu: <code>pc456</code>) để thao tác trực tiếp.
+                    • Đăng nhập tài khoản <code>phapche01</code> hoặc <code>pche_nhanvien1</code> để thao tác trực tiếp.
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -490,4 +490,3 @@ def legal_staff_view(active_tab: str = None):
                             )
                     else:
                         st.caption("Chưa có chi tiết checklist được lưu trữ.")
-
