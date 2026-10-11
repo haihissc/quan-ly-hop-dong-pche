@@ -10,14 +10,14 @@ Kiến trúc:
        * Bộ lọc động trạng thái và tìm kiếm thời gian thực.
     2. Phân công hồ sơ:
        * Chi tiết hồ sơ & Trình đọc văn bản A4 sắc nét / PDF nhúng chuẩn.
-       * Trợ lý AI Gemini 2.5 Flash Rà soát Toàn văn PDF & Hỏi đáp nhanh.
+       * Trợ lý AI Gemini 3.8 Flash Rà soát Toàn văn PDF & Hỏi đáp nhanh.
        * Action Bar ở Chân trang (Bottom Footer Section) giao việc cho chuyên viên pháp chế.
     3. Điều chuyển nhân sự:
        * Xem hồ sơ đang rà soát, lịch sử điều chuyển các lần trước.
        * Action Bar ở Chân trang điều phối sang chuyên viên tiếp nhận mới kèm lý do.
     4. Phê duyệt & Ban hành:
        * Bố cục 2 cột: Cột trái Trình đối chiếu văn bản PDF/A4, Cột phải Toàn bộ ý kiến checklist của Pháp chế.
-       * Trợ lý AI Gemini 2.5 Flash: Phân tích 4 nhóm rủi ro trọng yếu & Hỏi đáp điều khoản.
+       * Trợ lý AI Gemini 3.8 Flash: Phân tích 4 nhóm rủi ro trọng yếu & Hỏi đáp điều khoản.
        * Action Bar & Hướng dẫn ở Chân trang: Ý kiến chỉ đạo, Ký duyệt phát hành, Yêu cầu làm lại.
        * Xuất Phiếu góp ý PDF tiếng Việt Unicode và nút Tải về tự động.
 """
@@ -51,8 +51,10 @@ from workflow_engine import (
 )
 
 # ==============================================================================
-# HÀM BỔ TRỢ: KẾT NỐI & GỌI GEMINI 2.5 FLASH MULTIMODAL CHO FILE PDF
+# HÀM BỔ TRỢ: KẾT NỐI & GỌI GEMINI 3.8 FLASH MULTIMODAL CHO FILE PDF
 # ==============================================================================
+GEMINI_MODELS_CASCADE = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+
 def get_effective_gemini_api_key():
     """Lấy API Key từ session_state, biến môi trường hoặc config.json"""
     if st.session_state.get("gemini_api_key_custom"):
@@ -69,94 +71,106 @@ def get_effective_gemini_api_key():
         
     return ""
 
-def call_gemini_2_5_flash_pdf(pdf_bytes: bytes, prompt_text: str, api_key: str) -> str:
+def call_gemini_flash_pdf(pdf_bytes: bytes, prompt_text: str, api_key: str) -> str:
     """
-    Gọi Gemini 2.5 Flash phân tích file PDF.
-    Ưu tiên dùng google.generativeai SDK; nếu chưa có thì fallback sang REST API chuẩn của Gemini.
+    Gọi Gemini 3.8 Flash (kèm fallback đa mô hình) phân tích file PDF.
+    Hỗ trợ cả google.generativeai SDK và REST API trực tiếp.
     Đảm bảo tương thích 100% trên cả Streamlit Cloud và mọi môi trường Python.
     """
     if not api_key:
         raise ValueError("Chưa cấu hình GEMINI_API_KEY. Vui lòng nhập API Key để tiếp tục.")
 
     b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+    last_error_msg = ""
 
-    # Cách 1: Sử dụng google.generativeai SDK nếu có
-    if HAS_GENAI_LIB and genai is not None:
-        try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            pdf_part = {
-                "mime_type": "application/pdf",
-                "data": pdf_bytes
-            }
-            response = model.generate_content([pdf_part, prompt_text])
-            if hasattr(response, "text") and response.text:
-                return response.text
-        except Exception:
-            # Fallback sang REST API
-            pass
+    # Thử lần lượt các mô hình được Google khuyến nghị (ưu tiên gemini-3.8-flash)
+    for model_name in GEMINI_MODELS_CASCADE:
+        # Cách 1: Sử dụng google.generativeai SDK nếu có
+        if HAS_GENAI_LIB and genai is not None:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name)
+                pdf_part = {
+                    "mime_type": "application/pdf",
+                    "data": pdf_bytes
+                }
+                response = model.generate_content([pdf_part, prompt_text])
+                if hasattr(response, "text") and response.text:
+                    return response.text
+            except Exception as e_sdk:
+                last_error_msg = str(e_sdk)
 
-    # Cách 2: Gọi trực tiếp Google Generative Language REST API (Chuẩn Gemini 2.5 Flash)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "inlineData": {
-                            "mimeType": "application/pdf",
-                            "data": b64_pdf
+        # Cách 2: Gọi trực tiếp Google Generative Language REST API
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "inlineData": {
+                                "mimeType": "application/pdf",
+                                "data": b64_pdf
+                            }
+                        },
+                        {
+                            "text": prompt_text
                         }
-                    },
-                    {
-                        "text": prompt_text
-                    }
-                ]
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 4096
             }
-        ],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 4096
         }
-    }
 
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
-    )
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
 
-    try:
-        with urllib.request.urlopen(req, timeout=90) as response:
-            result = json.loads(response.read().decode("utf-8"))
-            candidates = result.get("candidates", [])
-            if candidates:
-                content = candidates[0].get("content", {})
-                parts = content.get("parts", [])
-                text_pieces = [p.get("text", "") for p in parts if "text" in p]
-                if text_pieces:
-                    return "".join(text_pieces)
-            return "Không nhận được phản hồi nội dung văn bản từ mô hình Gemini 2.5 Flash."
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="ignore")
         try:
-            err_json = json.loads(err_body)
-            msg = err_json.get("error", {}).get("message", err_body)
-        except Exception:
-            msg = err_body
-        raise RuntimeError(f"Lỗi kết nối Gemini API ({e.code}): {msg}")
-    except Exception as e:
-        raise RuntimeError(f"Lỗi khi gửi yêu cầu tới Gemini: {str(e)}")
+            with urllib.request.urlopen(req, timeout=90) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                candidates = result.get("candidates", [])
+                if candidates:
+                    content = candidates[0].get("content", {})
+                    parts = content.get("parts", [])
+                    text_pieces = [p.get("text", "") for p in parts if "text" in p]
+                    if text_pieces:
+                        return "".join(text_pieces)
+                return f"Không nhận được phản hồi nội dung văn bản từ mô hình {model_name}."
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            try:
+                err_json = json.loads(err_body)
+                msg = err_json.get("error", {}).get("message", err_body)
+            except Exception:
+                msg = err_body
+            last_error_msg = f"HTTP {e.code}: {msg}"
+            # Nếu 404 (model not found / deprecated), tiếp tục thử model kế tiếp trong GEMINI_MODELS_CASCADE
+            if e.code == 404:
+                continue
+            raise RuntimeError(f"Lỗi kết nối Gemini API ({e.code}): {msg}")
+        except Exception as e:
+            last_error_msg = str(e)
+            continue
+
+    raise RuntimeError(f"Không thể kết nối tới các phiên bản mô hình Gemini ({', '.join(GEMINI_MODELS_CASCADE)}). Chi tiết lỗi: {last_error_msg}")
+
+# Giữ alias tương thích ngược nếu có module khác gọi
+call_gemini_2_5_flash_pdf = call_gemini_flash_pdf
 
 def render_gemini_api_key_box(panel_key: str = "default"):
-    """Hộp cấu hình API Key thân thiện khi hệ thống chưa có key (ngăn trùng lặp element key)"""
+    """Hộp cấu hình API Key thân thiện khi hệ thống chưa có key"""
     current_key = get_effective_gemini_api_key()
     if not current_key:
         st.markdown(
             """
             <div style="background: #EFF6FF; border: 1.5px solid #93C5FD; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px;">
                 <div style="font-weight: 800; color: #1E40AF; font-size: 0.92rem; display: flex; align-items: center; gap: 8px;">
-                    <span>🧠 KÍCH HOẠT TRỢ LÝ AI GEMINI 2.5 FLASH RÀ SOÁT TOÀN VĂN</span>
+                    <span>🧠 KÍCH HOẠT TRỢ LÝ AI GEMINI 3.8 FLASH RÀ SOÁT TOÀN VĂN</span>
                 </div>
                 <div style="font-size: 0.82rem; color: #1E3A8A; margin-top: 6px; line-height: 1.5;">
                     Để kích hoạt tính năng thẩm định rủi ro hợp đồng tự động đa phương thức (Multimodal PDF Review), vui lòng cung cấp Gemini API Key.<br/>
@@ -191,8 +205,8 @@ def render_gemini_api_key_box(panel_key: str = "default"):
 
 def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, panel_prefix: str):
     """
-    Bảng điều khiển AI Gemini 2.5 Flash:
-    - Nút bấm '🧠 Gemini 2.5 Flash: Rà soát Rủi ro Toàn văn'
+    Bảng điều khiển AI Gemini 3.8 Flash:
+    - Nút bấm '🧠 Gemini 3.8 Flash: Rà soát Rủi ro Toàn văn'
     - Phân tích 4 nhóm rủi ro pháp lý
     - Hỏi đáp trực tiếp về điều khoản trong hợp đồng (Document Q&A)
     """
@@ -202,10 +216,10 @@ def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, pan
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 1.15rem;">🧠</span>
-                    <span style="font-weight: 800; font-size: 0.95rem; color: #065F46;">TRỢ LÝ PHÁP LÝ AI - GEMINI 2.5 FLASH (MULTIMODAL PDF)</span>
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #065F46;">TRỢ LÝ PHÁP LÝ AI - GEMINI 3.8 FLASH (MULTIMODAL PDF)</span>
                 </div>
                 <span style="font-size: 0.75rem; background: #DCFCE7; color: #166534; font-weight: 700; padding: 2px 8px; border-radius: 20px;">
-                    Model: gemini-2.5-flash
+                    Model: gemini-3.8-flash
                 </span>
             </div>
             <div style="font-size: 0.82rem; color: #166534; margin-top: 4px;">
@@ -242,13 +256,14 @@ def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, pan
         st.error("Không thể giải mã dữ liệu PDF nhị phân từ tài liệu đính kèm.")
         return
 
+    c_id = contract.get("id")
     file_name = chosen_attachment.get("file_name", "document.pdf")
     review_cache_key = f"gemini_review_result_{c_id}_{file_name}"
 
     col_btn_ai, col_clear_ai = st.columns([3, 1])
     with col_btn_ai:
         btn_run_ai = st.button(
-            "🧠 Gemini 2.5 Flash: Rà soát Rủi ro Toàn văn",
+            "🧠 Gemini 3.8 Flash: Rà soát Rủi ro Toàn văn",
             type="primary",
             use_container_width=True,
             key=f"btn_run_gemini_full_{panel_prefix}_{c_id}"
@@ -264,7 +279,7 @@ def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, pan
         if not active_key:
             st.warning("Vui lòng nhập API Key ở ô phía trên hoặc tại [Google AI Studio](https://aistudio.google.com/app/apikey) để thực thi!")
         else:
-            with st.spinner("🤖 Gemini 2.5 Flash đang thẩm định toàn văn tệp PDF... Quá trình này mất khoảng 5-15 giây..."):
+            with st.spinner("🤖 Gemini 3.8 Flash đang thẩm định toàn văn tệp PDF... Quá trình này mất khoảng 5-15 giây..."):
                 prompt_analysis = f"""
 Bạn là Trưởng ban Pháp lý Doanh nghiệp Cấp cao (Senior Legal Counsel / Chief Legal Officer) với hơn 20 năm kinh nghiệm rà soát hợp đồng kinh tế và thương mại.
 Hồ sơ rà soát:
@@ -298,9 +313,9 @@ HÃY ĐỌC TOÀN VĂN TỆP PDF ĐÍNH KÈM VÀ LẬP BÁO CÁO ĐÁNH GIÁ R�
 - Tóm tắt 1-2 chỉ đạo cốt lõi Giám đốc cần yêu cầu đối tác chỉnh sửa trước khi đặt bút ký.
 """
                 try:
-                    ai_result = call_gemini_2_5_flash_pdf(pdf_raw_bytes, prompt_analysis, active_key)
+                    ai_result = call_gemini_flash_pdf(pdf_raw_bytes, prompt_analysis, active_key)
                     st.session_state[review_cache_key] = ai_result
-                    st.success("✅ Gemini 2.5 Flash đã hoàn tất phân tích toàn văn hợp đồng!")
+                    st.success("✅ Gemini 3.8 Flash đã hoàn tất phân tích toàn văn hợp đồng!")
                 except Exception as err:
                     st.error(f"⚠️ Không thể thực thi phân tích AI: {str(err)}")
 
@@ -311,7 +326,7 @@ HÃY ĐỌC TOÀN VĂN TỆP PDF ĐÍNH KÈM VÀ LẬP BÁO CÁO ĐÁNH GIÁ R�
             f"""
             <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 18px 20px; margin-top: 10px; margin-bottom: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
                 <div style="border-bottom: 1.5px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 800; color: #0F172A; font-size: 0.95rem;">📊 BÁO CÁO THẨM ĐỊNH RỦI RO TOÀN VĂN TỪ GEMINI 2.5 FLASH</span>
+                    <span style="font-weight: 800; color: #0F172A; font-size: 0.95rem;">📊 BÁO CÁO THẨM ĐỊNH RỦI RO TOÀN VĂN TỪ GEMINI 3.8 FLASH</span>
                     <span style="font-size: 0.75rem; color: #64748B;">Hồ sơ: <b>{contract.get('id')}</b></span>
                 </div>
             </div>
@@ -365,7 +380,7 @@ Yêu cầu:
 3. Nếu hợp đồng KHÔNG đề cập nội dung này, hãy trả lời rõ ràng: "Trong văn bản hợp đồng không có điều khoản quy định về nội dung này."
 """
                     try:
-                        ans_text = call_gemini_2_5_flash_pdf(pdf_raw_bytes, qa_prompt, active_key)
+                        ans_text = call_gemini_flash_pdf(pdf_raw_bytes, qa_prompt, active_key)
                         st.session_state[qa_history_key].append({
                             "question": user_question.strip(),
                             "answer": ans_text
@@ -868,9 +883,9 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 else:
                     st.info("Tệp đính kèm không có dữ liệu chuỗi nội dung.")
 
-            # TÍCH HỢP GEMINI 2.5 FLASH TẠI MÀN HÌNH PHÂN CÔNG
+            # TÍCH HỢP GEMINI 3.8 FLASH TẠI MÀN HÌNH PHÂN CÔNG
             if chosen_att:
-                with st.expander("🤖 Trợ lý AI Gemini 2.5 Flash: Đánh giá nhanh rủi ro tệp hồ sơ này", expanded=False):
+                with st.expander("🤖 Trợ lý AI Gemini 3.8 Flash: Đánh giá nhanh rủi ro tệp hồ sơ này", expanded=False):
                     render_gemini_ai_contract_panel(target_contract, chosen_att, "assign_panel")
 
             # 3. ACTION BAR & HƯỚNG DẪN Ở CHÂN TRANG (BOTTOM SECTION)
@@ -1102,12 +1117,12 @@ def director_view(readonly: bool = False, active_tab: str = None):
                         st.error(msg)
 
     # ==========================================================================
-    # TAB 4: PHÊ DUYỆT & BAN HÀNH (GEMINI 2.5 FLASH MULTIMODAL & BOTTOM FOOTER)
+    # TAB 4: PHÊ DUYỆT & BAN HÀNH (GEMINI 3.8 FLASH MULTIMODAL & BOTTOM FOOTER)
     # ==========================================================================
     with tab_approve:
         st.subheader("✍️ Phê Duyệt & Ban Hành Hợp Đồng")
         st.markdown(
-            "Giám đốc Pháp chế đối chiếu nội dung văn bản hợp đồng (PDF), phân tích rủi ro toàn văn bằng AI Gemini 2.5 Flash, "
+            "Giám đốc Pháp chế đối chiếu nội dung văn bản hợp đồng (PDF), phân tích rủi ro toàn văn bằng AI Gemini 3.8 Flash, "
             "và xem xét kết luận của chuyên viên để ra quyết định **'Ký duyệt phát hành'** hoặc **'Yêu cầu làm lại'** tại khu vực Chân trang."
         )
 
@@ -1352,7 +1367,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     else:
                         st.caption("Chưa có bảng checklist chi tiết.")
 
-            # TÍCH HỢP GEMINI 2.5 FLASH RÀ SOÁT RỦI RO TOÀN VĂN & DOCUMENT Q&A
+            # TÍCH HỢP GEMINI 3.8 FLASH RÀ SOÁT RỦI RO TOÀN VĂN & DOCUMENT Q&A
             if chosen_appr_att:
                 st.markdown("---")
                 render_gemini_ai_contract_panel(appr_contract, chosen_appr_att, "approve_panel")
@@ -1368,7 +1383,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     </div>
                     <div class="dir-footer-desc">
                         Sau khi đã kiểm tra toàn bộ văn bản đối chiếu (PDF) bên trái, kết quả thẩm định của Pháp chế bên phải và 
-                        báo cáo rủi ro AI Gemini 2.5 Flash, Giám đốc nhập ý kiến chỉ đạo cuối cùng và lựa chọn: 
+                        báo cáo rủi ro AI Gemini 3.8 Flash, Giám đốc nhập ý kiến chỉ đạo cuối cùng và lựa chọn: 
                         <b>'Ký duyệt phát hành'</b> (hồ sơ Hoàn tất) hoặc <b>'Yêu cầu làm lại'</b> (trả về cho chuyên viên điều chỉnh).
                     </div>
                 </div>
