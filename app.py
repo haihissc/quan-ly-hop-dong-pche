@@ -1,7 +1,8 @@
 """
 HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
 File: app.py
-Chứa: Cấu hình set_page_config, CSS giao diện Doanh nghiệp, Đăng nhập bảo mật căn giữa, và Điều hướng Menu theo Role.
+Chứa: Cấu hình set_page_config, CSS giao diện Doanh nghiệp, Đăng nhập bảo mật căn giữa,
+      và Tinh gọn Sidebar Navigation đưa Menu Chức Năng lên trên cùng với màu sắc tương tác chuyên nghiệp.
 """
 
 import base64
@@ -28,7 +29,7 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# 2. HÀM ÉP GIAO DIỆN LIGHT MODE & HIỆN ĐẠI (APPLY_CUSTOM_CSS)
+# 2. HÀM ÉP GIAO DIỆN LIGHT MODE & NÂNG CẤP CSS SIDEBAR NAVIGATION
 # ==============================================================================
 def apply_custom_css():
     custom_css = """
@@ -119,7 +120,6 @@ def apply_custom_css():
             margin-top: 10px !important;
         }
 
-        /* Ô nhập liệu: Bo góc gọn gàng, viền đổi màu xanh khi người dùng bấm vào (focus state) */
         .stTextInput > div > div > input,
         .stTextInput input {
             border-radius: 10px !important;
@@ -135,8 +135,6 @@ def apply_custom_css():
             outline: none !important;
         }
 
-        /* Nút đăng nhập: Thiết kế tràn viền (width: 100%), màu xanh doanh nghiệp sang trọng
-           (Corporate Blue Gradient từ #1E40AF sang #2563EB), chữ trắng in đậm nhẹ, hiệu ứng chuyển màu mượt mà khi hover */
         div[data-testid="stForm"] button[kind="primaryFormSubmit"],
         div[data-testid="stForm"] .stButton > button,
         div[data-testid="stForm"] button {
@@ -166,6 +164,94 @@ def apply_custom_css():
         div[data-testid="stForm"] button:active {
             transform: translateY(0px) !important;
         }
+
+        /* ========================================================== */
+        /* CSS CHUYÊN BIỆT CHO SIDEBAR NAVIGATION (MÀU SẮC TƯƠNG TÁC) */
+        /* ========================================================== */
+        /* Ẩn dấu chấm tròn radio mặc định để tạo giao diện menu dạng nút/thẻ */
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child[data-baseweb="radio__circle"],
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
+            display: none !important;
+        }
+
+        /* 1. NỀN MẶC ĐỊNH CỦA TỪNG MỤC: Màu vàng sáng / kem nhạt dịu mắt (#FEF9C3), bo viền mềm (8px), padding vừa vặn, viền vàng nhạt */
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label {
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+            background-color: #FEF9C3 !important;
+            border: 1px solid #FDE047 !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            margin-bottom: 6px !important;
+            cursor: pointer !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label p,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label span,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+            color: #854D0E !important;
+            font-weight: 600 !important;
+            font-size: 0.88rem !important;
+            line-height: 1.35 !important;
+            transition: color 0.2s ease !important;
+        }
+
+        /* 2. HIỆU ỨNG HOVER (RÊ CHUỘT QUA): Nền mượt mà chuyển sang xanh nhạt (#E0F2FE), viền đổi sắc xanh (#7DD3FC) */
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: #E0F2FE !important;
+            border-color: #7DD3FC !important;
+            box-shadow: 0 2px 6px rgba(14, 165, 233, 0.12) !important;
+            transform: translateX(3px) !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover p,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover span,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover div[data-testid="stMarkdownContainer"] {
+            color: #0369A1 !important;
+        }
+
+        /* 3. MỤC ĐANG CHỌN (ACTIVE / SELECTED): Đỏ nổi bật (#DC2626), viền đỏ (#B91C1C), chữ đổi sang trắng in đậm (bold) */
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"],
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input[type="radio"]:checked) {
+            background-color: #DC2626 !important;
+            border-color: #B91C1C !important;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.25) !important;
+            transform: translateX(4px) !important;
+        }
+
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) div[data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] p,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] span,
+        [data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] div[data-testid="stMarkdownContainer"] {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+        }
+
+        /* 4. NÚT ĐĂNG XUẤT (LOGOUT) Ở CUỐI SIDEBAR: Nhỏ gọn, tinh tế, viền đỏ nhẹ */
+        [data-testid="stSidebar"] .logout-btn-container button {
+            background: #FFFFFF !important;
+            color: #DC2626 !important;
+            border: 1px solid #FCA5A5 !important;
+            border-radius: 8px !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            padding: 7px 14px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stSidebar"] .logout-btn-container button:hover {
+            background: #FEF2F2 !important;
+            border-color: #DC2626 !important;
+            color: #991B1B !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15) !important;
+        }
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
@@ -180,7 +266,6 @@ def display_branding(in_sidebar: bool = True):
     company_name = system_config.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
     short_name = system_config.get("short_name", "CNS")
     logo_b64 = system_config.get("logo_base64", DEFAULT_LOGO_SVG_B64).strip()
-    system_version = system_config.get("system_version", "1.0.0")
 
     if logo_b64.startswith("data:image"):
         image_src = logo_b64
@@ -194,14 +279,16 @@ def display_branding(in_sidebar: bool = True):
     if in_sidebar:
         st.sidebar.markdown(
             f"""
-            <div style="text-align: center; padding: 10px 4px 18px 4px; border-bottom: 2px solid #E2E8F0; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 8px;">
-                    <img src="{image_src}" alt="Logo Công ty" style="height: 56px; width: 56px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.06);" />
-                </div>
-                <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
-                <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; line-height: 1.3; margin-top: 3px;">{company_name}</div>
-                <div style="display: inline-block; margin-top: 8px; font-size: 0.70rem; padding: 2px 10px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
-                    QUẢN TRỊ HỢP ĐỒNG v{system_version}
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <img src="{image_src}" alt="Logo" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px; padding: 1px; border: 1px solid #E2E8F0; background: #FFFFFF; flex-shrink: 0;" />
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #2563EB; text-transform: uppercase;">{short_name}</span>
+                            <span style="font-size: 0.62rem; background: #F1F5F9; color: #64748B; padding: 1px 5px; border-radius: 4px; font-weight: 600;">v2.0</span>
+                        </div>
+                        <div style="font-size: 0.75rem; font-weight: 700; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;" title="{company_name}">{company_name}</div>
+                    </div>
                 </div>
             </div>
             """,
@@ -302,6 +389,7 @@ def render_login_screen():
                         st.session_state["logged_in"] = True
                         st.session_state["user"] = matched_account
                         st.session_state["role"] = matched_account.get("role", "Phòng ban đề nghị")
+                        st.session_state["fullname"] = matched_account.get("full_name") or matched_account.get("username")
                         st.success(f"Đăng nhập thành công! Xin chào, {matched_account.get('full_name')}.")
                         st.rerun()
                     else:
@@ -321,99 +409,152 @@ def logout_user():
     st.session_state["logged_in"] = False
     st.session_state["user"] = None
     st.session_state["role"] = None
+    st.session_state["fullname"] = None
     st.rerun()
 
 # ==============================================================================
-# 5. ĐIỀU HƯỚNG TỔNG THỂ & RENDER_MAIN_DASHBOARD()
+# 5. KHỐI THÔNG TIN GỌN GÀNG (COMPACT PROFILE & BRANDING) Ở ĐẦU SIDEBAR
 # ==============================================================================
-def render_main_dashboard():
-    display_branding(in_sidebar=True)
+def render_compact_sidebar_header():
+    system_config = get_config()
+    company_name = system_config.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
+    short_name = system_config.get("short_name", "CNS")
+    logo_b64 = system_config.get("logo_base64", DEFAULT_LOGO_SVG_B64).strip()
+
+    if logo_b64.startswith("data:image"):
+        image_src = logo_b64
+    else:
+        try:
+            sample_header = base64.b64decode(logo_b64[:64]).decode("utf-8", errors="ignore")
+            image_src = f"data:image/svg+xml;base64,{logo_b64}" if ("<svg" in sample_header or "xml" in sample_header) else f"data:image/png;base64,{logo_b64}"
+        except Exception:
+            image_src = f"data:image/svg+xml;base64,{logo_b64}"
 
     current_user = st.session_state.get("user", {})
+    user_fullname = st.session_state.get("fullname") or current_user.get("full_name") or current_user.get("username", "Người dùng")
     user_role = st.session_state.get("role") or current_user.get("role", "Phòng ban đề nghị")
     st.session_state["role"] = user_role
-    user_dept = current_user.get("department", "Chưa phân bổ")
+    st.session_state["fullname"] = user_fullname
 
+    # Khối thông tin tinh gọn tối đa: Logo nhỏ (36px), Tên công ty, huy hiệu v2.0, Họ tên & Tag Role
     st.sidebar.markdown(
         f"""
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px; margin-bottom: 14px;">
-            <div style="font-size: 0.75rem; color: #64748B; font-weight: 700; text-transform: uppercase;">TÀI KHOẢN ĐANG ĐĂNG NHẬP:</div>
-            <div style="font-size: 0.95rem; color: #0F172A; font-weight: 800; margin-top: 2px;">{current_user.get('full_name', 'N/A')}</div>
-            <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-                <span style="font-size: 0.75rem; background-color: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 6px; font-weight: 600;">{user_role}</span>
-                <span style="font-size: 0.75rem; background-color: #E2E8F0; color: #334155; padding: 2px 8px; border-radius: 6px;">{user_dept}</span>
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <!-- Hàng 1: Logo 36px + Tên công ty + Huy hiệu v2.0 -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <img src="{image_src}" alt="Logo" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px; padding: 1px; border: 1px solid #E2E8F0; background: #FFFFFF; flex-shrink: 0;" />
+                <div style="min-width: 0; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #2563EB; text-transform: uppercase;">{short_name}</span>
+                        <span style="font-size: 0.62rem; background: #F1F5F9; color: #64748B; padding: 1px 5px; border-radius: 4px; font-weight: 600;">v2.0</span>
+                    </div>
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;" title="{company_name}">{company_name}</div>
+                </div>
+            </div>
+            <!-- Hàng 2: Họ tên người dùng & Tag vai trò thu nhỏ -->
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #F1F5F9; padding-top: 6px; gap: 4px;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{user_fullname}">
+                    👤 {user_fullname}
+                </div>
+                <span style="font-size: 0.68rem; background: #DC2626; color: #FFFFFF; padding: 2px 7px; border-radius: 5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;">
+                    {user_role}
+                </span>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    if st.sidebar.button("🚪 Đăng xuất", use_container_width=True):
-        logout_user()
+# ==============================================================================
+# 6. ĐIỀU HƯỚNG TỔNG THỂ & RENDER_MAIN_DASHBOARD()
+# ==============================================================================
+def render_main_dashboard():
+    # 1. Vẽ Khối Thông tin Gọn gàng (Compact Profile & Branding)
+    render_compact_sidebar_header()
 
-    st.sidebar.markdown("---")
+    user_role = st.session_state.get("role", "Phòng ban đề nghị")
 
     # ==========================================================================
-    # MENU ĐIỀU HƯỚNG ĐỘC LẬP THEO VAI TRÒ (SIDEBAR ISOLATION)
-    # Dựa vào st.session_state['role'], CHỈ hiển thị các chức năng thuộc về Role đó.
-    # Tuyệt đối không dùng chung một menu chọn cho tất cả.
+    # 2. ĐẨY MENU CHỨC NĂNG LÊN VỊ TRÍ TRUNG TÂM (NGAY PHÍA TRÊN CÙNG)
+    # Hiển thị các mục chức năng tương ứng theo đúng Role hiện tại
     # ==========================================================================
     if user_role == "Admin":
         menu_options = [
-            "Quản trị hệ thống",
-            "Cấu hình quy trình",
-            "Giám sát Hệ thống (Read-Only)"
+            "⚙️ Quản trị hệ thống",
+            "📋 Cấu hình quy trình",
+            "📊 Giám sát Hệ thống (Read-Only)"
         ]
     elif user_role in ["Giám đốc Pháp chế", "Ban Giám đốc", "Giám đốc"]:
         menu_options = [
-            "Phân công",
-            "Phê duyệt",
-            "Dashboard"
+            "👥 Phân công hồ sơ",
+            "✍️ Phê duyệt hợp đồng",
+            "📈 Dashboard giám sát"
         ]
     elif user_role in ["Nhân viên Pháp chế", "Phó Phòng Pháp chế", "Chuyên viên Pháp chế", "Pháp chế"]:
         menu_options = [
-            "Hồ sơ đang rà soát",
-            "Lịch sử"
+            "🔍 Hồ sơ đang rà soát",
+            "📜 Lịch sử rà soát"
         ]
     else:  # Phòng ban đề nghị
         menu_options = [
-            "Trình hồ sơ mới",
-            "Theo dõi hồ sơ"
+            "📤 Trình hồ sơ mới",
+            "📂 Theo dõi hồ sơ"
         ]
 
-    st.sidebar.markdown(f"#### 🧭 Menu Chức Năng ({user_role})")
-    choice = st.sidebar.radio("CHỌN CHỨC NĂNG:", menu_options, key="isolated_sidebar_nav")
+    st.sidebar.markdown(
+        f"<div style='font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.04em;'>🧭 MENU CHỨC NĂNG ({user_role})</div>",
+        unsafe_allow_html=True
+    )
+    
+    choice = st.sidebar.radio(
+        label="Danh mục điều hướng",
+        options=menu_options,
+        key=f"sidebar_nav_{user_role}",
+        label_visibility="collapsed"
+    )
 
+    # ==========================================================================
+    # 3. CHUYỂN NÚT 'ĐĂNG XUẤT' XUỐNG CUỐI CÙNG CỦA SIDEBAR
+    # ==========================================================================
+    st.sidebar.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div class='logout-btn-container'>", unsafe_allow_html=True)
+    if st.sidebar.button("🚪 Đăng xuất", use_container_width=True, key="sidebar_logout_btn"):
+        logout_user()
+    st.sidebar.markdown("</div>", unsafe_allow_html=True)
+
+    # ==========================================================================
+    # 4. ĐIỀU HƯỚNG THỰC THI VIEW TƯƠNG ỨNG
+    # ==========================================================================
     # 1. ADMIN
-    if choice == "Quản trị hệ thống":
+    if "Quản trị hệ thống" in choice:
         admin_view()
-    elif choice == "Cấu hình quy trình":
+    elif "Cấu hình quy trình" in choice:
         workflow_config_view()
-    elif choice == "Giám sát Hệ thống (Read-Only)":
+    elif "Giám sát Hệ thống" in choice:
         director_view(readonly=True, active_tab="dashboard")
 
-    # 2. GIÁM ĐỐC PHÁP CHẾ
-    elif choice == "Phân công":
+    # 2. GIÁM ĐỐC PHÁP CHẾ / BAN GIÁM ĐỐC
+    elif "Phân công" in choice:
         director_view(readonly=False, active_tab="assign")
-    elif choice == "Phê duyệt":
+    elif "Phê duyệt" in choice:
         director_view(readonly=False, active_tab="approve")
-    elif choice == "Dashboard":
+    elif "Dashboard" in choice:
         director_view(readonly=False, active_tab="dashboard")
 
     # 3. NHÂN VIÊN PHÁP CHẾ
-    elif choice == "Hồ sơ đang rà soát":
+    elif "đang rà soát" in choice:
         legal_staff_view(active_tab="reviewing")
-    elif choice == "Lịch sử":
+    elif "Lịch sử" in choice:
         legal_staff_view(active_tab="history")
 
     # 4. PHÒNG BAN ĐỀ NGHỊ
-    elif choice == "Trình hồ sơ mới":
+    elif "Trình hồ sơ" in choice:
         department_view(active_tab="submit")
-    elif choice == "Theo dõi hồ sơ":
+    elif "Theo dõi" in choice:
         department_view(active_tab="tracking")
 
 # ==============================================================================
-# 6. ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
+# 7. ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
 # ==============================================================================
 def main():
     if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
