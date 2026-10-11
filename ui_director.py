@@ -831,21 +831,26 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 stored_pdf_name = st.session_state.get(f"last_gen_pdf_name_{appr_contract.get('id')}", f"Phieu_gop_y_{appr_contract.get('id')}.pdf")
 
                 if not stored_pdf:
-                    stored_pdf = generate_review_pdf(
-                        contract=appr_contract,
-                        action_type="approve",
-                        director_notes=dir_opinion.strip(),
-                        director_name=current_fullname
-                    )
-                    stored_pdf_name = f"Phieu_gop_y_{appr_contract.get('id')}.pdf"
+                    try:
+                        stored_pdf = generate_review_pdf(
+                            contract=appr_contract,
+                            action_type="approve",
+                            director_notes=dir_opinion.strip(),
+                            director_name=current_fullname
+                        )
+                        stored_pdf_name = f"Phieu_gop_y_{appr_contract.get('id')}.pdf"
+                    except Exception as pdf_err:
+                        stored_pdf = None
+                        st.caption(f"⚠️ Chưa tạo bản xem trước PDF: {str(pdf_err)}")
 
-                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-                st.download_button(
-                    label=f"📥 Tải 'Phiếu góp ý Hợp đồng' ({stored_pdf_name})",
-                    data=stored_pdf,
-                    file_name=stored_pdf_name,
-                    mime="application/pdf",
-                    key=f"btn_download_review_pdf_{appr_contract.get('id')}",
-                    use_container_width=True
-                )
+                if stored_pdf:
+                    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                    st.download_button(
+                        label=f"📥 Tải 'Phiếu góp ý Hợp đồng' ({stored_pdf_name})",
+                        data=stored_pdf,
+                        file_name=stored_pdf_name,
+                        mime="application/pdf",
+                        key=f"btn_download_review_pdf_{appr_contract.get('id')}",
+                        use_container_width=True
+                    )
 
