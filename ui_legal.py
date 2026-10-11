@@ -14,7 +14,8 @@ import streamlit as st
 from db_utils import (
     get_contracts,
     get_users,
-    get_config
+    get_config,
+    get_workflows
 )
 from workflow_engine import save_legal_review
 
