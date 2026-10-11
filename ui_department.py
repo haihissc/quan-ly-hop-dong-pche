@@ -117,4 +117,3 @@ def department_view(active_tab: str = None):
                     st.rerun()
                 else:
                     st.error(msg)
-
