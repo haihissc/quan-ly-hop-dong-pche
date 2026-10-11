@@ -45,19 +45,44 @@ class ContractReviewPDF(FPDF):
         self.set_text_color(100, 116, 139)
         self.cell(0, 10, f"Trang {self.page_no()} | He thong Quan tri Hop dong - Asia Holdings", 0, 0, "C")
 
+def strip_accents(text: str) -> str:
+    """Loại bỏ dấu tiếng Việt để fallback an toàn tuyệt đối khi không tải được font TTF"""
+    import unicodedata
+    if not text:
+        return ""
+    try:
+        text = str(text)
+        text = text.replace("Đ", "D").replace("đ", "d")
+        normalized = unicodedata.normalize("NFKD", text)
+        return "".join([c for c in normalized if not unicodedata.combining(c)])
+    except Exception:
+        return text
+
 def get_unicode_font_paths():
-    """Tìm font TTF hỗ trợ Unicode tiếng Việt trên hệ thống"""
+    """Tìm font TTF hỗ trợ Unicode tiếng Việt trên hệ thống với độ ưu tiên chính xác tuyệt đối"""
+    base_dir = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
+    applet_dir = "/app/applet"
+    mount_dir = "/mount/src/quan-ly-hop-dong-pche"
+    
     font_candidates = [
-        "/Arial.ttf",
+        os.path.join(base_dir, "Arial.ttf"),
+        os.path.join(applet_dir, "Arial.ttf"),
+        os.path.join(mount_dir, "Arial.ttf"),
+        os.path.join(os.getcwd(), "Arial.ttf"),
         "Arial.ttf",
+        "/Arial.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "C:\\Windows\\Fonts\\arial.ttf"
     ]
     bold_candidates = [
-        "/Arial-Bold.ttf",
+        os.path.join(base_dir, "Arial-Bold.ttf"),
+        os.path.join(applet_dir, "Arial-Bold.ttf"),
+        os.path.join(mount_dir, "Arial-Bold.ttf"),
+        os.path.join(os.getcwd(), "Arial-Bold.ttf"),
         "Arial-Bold.ttf",
+        "/Arial-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -84,26 +109,49 @@ def generate_review_pdf(contract: dict, action_type: str, director_notes: str, d
 
     font_path, font_bold_path = get_unicode_font_paths()
     font_family = "Helvetica"
+    unicode_enabled = False
+    
     if font_path:
         try:
-            pdf.add_font("ArialUnicode", "", font_path, uni=True)
-            if font_bold_path:
-                pdf.add_font("ArialUnicode", "B", font_bold_path, uni=True)
-            else:
-                pdf.add_font("ArialUnicode", "B", font_path, uni=True)
+            # fpdf 1.7.x hỗ trợ uni=True, fpdf2 hỗ trợ fname trực tiếp
+            try:
+                pdf.add_font("ArialUnicode", "", font_path, uni=True)
+                if font_bold_path:
+                    pdf.add_font("ArialUnicode", "B", font_bold_path, uni=True)
+                else:
+                    pdf.add_font("ArialUnicode", "B", font_path, uni=True)
+            except TypeError:
+                # Dành cho fpdf2 không nhận tham số uni
+                pdf.add_font("ArialUnicode", "", font_path)
+                if font_bold_path:
+                    pdf.add_font("ArialUnicode", "B", font_bold_path)
+                else:
+                    pdf.add_font("ArialUnicode", "B", font_path)
             font_family = "ArialUnicode"
+            unicode_enabled = True
         except Exception:
             font_family = "Helvetica"
+            unicode_enabled = False
 
     pdf.custom_font_family = font_family
 
+    def s(txt: str) -> str:
+        """Hàm chuẩn hóa chuỗi: nếu không dùng được font Unicode thì tự bóc dấu tránh lỗi crash latin1"""
+        if unicode_enabled:
+            return str(txt)
+        return strip_accents(str(txt))
+
+    cfg_sys = get_config()
+    company_name = cfg_sys.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
+    short_name = cfg_sys.get("short_name", "CNS")
+
     # 1. TIÊU ĐỀ DOANH NGHIỆP
-    pdf.set_font(font_family, "B", 11)
+    pdf.set_font(font_family, "B", 10.5)
     pdf.set_text_color(30, 41, 59)
-    pdf.cell(0, 6, "TẬP ĐOÀN CÔNG NGHỆ VÀ THƯƠNG MẠI Á CHÂU - ASIA HOLDINGS", 0, 1, "C")
+    pdf.cell(0, 6, s(f"{company_name} ({short_name})"), 0, 1, "C")
     pdf.set_font(font_family, "", 9)
     pdf.set_text_color(100, 116, 139)
-    pdf.cell(0, 5, "HỘI ĐỒNG THẨM ĐỊNH & PHÊ DUYỆT PHÁP LÝ HỢP ĐỒNG", 0, 1, "C")
+    pdf.cell(0, 5, s("HỘI ĐỒNG THẨM ĐỊNH & PHÊ DUYỆT PHÁP LÝ HỢP ĐỒNG"), 0, 1, "C")
 
     pdf.set_draw_color(37, 99, 235)
     pdf.set_line_width(0.8)
