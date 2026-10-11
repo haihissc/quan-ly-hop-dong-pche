@@ -1,7 +1,7 @@
 """
 HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
-File: app.py (Bước 9.2 Refactored - Giao diện Đăng nhập Chuẩn Production)
-Chứa: Cấu hình set_page_config, CSS giao diện, Đăng nhập bảo mật căn giữa, và Điều hướng Menu theo Role.
+File: app.py
+Chứa: Cấu hình set_page_config, CSS giao diện Doanh nghiệp, Đăng nhập bảo mật căn giữa, và Điều hướng Menu theo Role.
 """
 
 import base64
@@ -114,37 +114,57 @@ def apply_custom_css():
             background-color: #FFFFFF !important;
             border: 1px solid #E2E8F0 !important;
             border-radius: 16px !important;
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
-            padding: 28px 24px 24px 24px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+            padding: 32px 28px !important;
             margin-top: 10px !important;
         }
 
-        /* Nút đăng nhập: Tràn viền (100%), xanh dương đậm chuyên nghiệp */
+        /* Ô nhập liệu: Bo góc gọn gàng, viền đổi màu xanh khi người dùng bấm vào (focus state) */
+        .stTextInput > div > div > input,
+        .stTextInput input {
+            border-radius: 10px !important;
+            border: 1.5px solid #CBD5E1 !important;
+            padding: 10px 14px !important;
+            font-size: 0.95rem !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+        }
+        .stTextInput > div > div > input:focus,
+        .stTextInput input:focus {
+            border-color: #2563EB !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            outline: none !important;
+        }
+
+        /* Nút đăng nhập: Thiết kế tràn viền (width: 100%), màu xanh doanh nghiệp sang trọng
+           (Corporate Blue Gradient từ #1E40AF sang #2563EB), chữ trắng in đậm nhẹ, hiệu ứng chuyển màu mượt mà khi hover */
         div[data-testid="stForm"] button[kind="primaryFormSubmit"],
-        div[data-testid="stForm"] .stButton > button {
+        div[data-testid="stForm"] .stButton > button,
+        div[data-testid="stForm"] button {
             width: 100% !important;
-            background-color: #1E40AF !important;
+            background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 10px !important;
-            padding: 12px 20px !important;
+            padding: 12px 24px !important;
             font-size: 1rem !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
             letter-spacing: 0.02em !important;
-            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25) !important;
-            transition: all 0.2s ease-in-out !important;
+            box-shadow: 0 4px 14px rgba(30, 64, 175, 0.25) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             cursor: pointer !important;
-            margin-top: 12px !important;
+            margin-top: 14px !important;
         }
         div[data-testid="stForm"] button[kind="primaryFormSubmit"]:hover,
-        div[data-testid="stForm"] .stButton > button:hover {
-            background-color: #1D4ED8 !important;
-            box-shadow: 0 6px 16px rgba(30, 64, 175, 0.35) !important;
+        div[data-testid="stForm"] .stButton > button:hover,
+        div[data-testid="stForm"] button:hover {
+            background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%) !important;
+            box-shadow: 0 6px 20px rgba(30, 64, 175, 0.35) !important;
             transform: translateY(-1px) !important;
         }
         div[data-testid="stForm"] button[kind="primaryFormSubmit"]:active,
-        div[data-testid="stForm"] .stButton > button:active {
-            transform: translateY(0) !important;
+        div[data-testid="stForm"] .stButton > button:active,
+        div[data-testid="stForm"] button:active {
+            transform: translateY(0px) !important;
         }
     </style>
     """
@@ -190,14 +210,14 @@ def display_branding(in_sidebar: bool = True):
     else:
         st.markdown(
             f"""
-            <div style="text-align: center; padding: 24px 20px 20px 20px; margin-bottom: 16px; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+            <div style="text-align: center; padding: 6px 12px 18px 12px; border-bottom: 1px solid #F1F5F9; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-                    <img src="{image_src}" alt="Logo Doanh nghiệp" style="height: 76px; width: 76px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);" />
+                    <img src="{image_src}" alt="Logo Doanh nghiệp" style="height: 68px; width: 68px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); padding: 4px; background: #FFFFFF; border: 1px solid #F1F5F9;" />
                 </div>
-                <div style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
-                <h3 style="color: #0F172A; font-size: 1.15rem; font-weight: 800; margin-top: 4px; margin-bottom: 8px; line-height: 1.35;">{company_name}</h3>
-                <div style="display: inline-block; font-size: 0.75rem; padding: 3px 14px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
-                    HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG v{system_version}
+                <div style="font-size: 0.80rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
+                <h3 style="color: #0F172A; font-size: 1.10rem; font-weight: 800; margin-top: 4px; margin-bottom: 6px; line-height: 1.35; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">{company_name}</h3>
+                <div style="font-size: 0.85rem; color: #64748B; font-weight: 500;">
+                    Hệ thống Theo dõi & Soát xét Hợp đồng
                 </div>
             </div>
             """,
@@ -212,43 +232,30 @@ def render_login_screen():
     display_branding(in_sidebar=True)
 
     # Chia cột cân xứng: Đẩy toàn bộ khu vực đăng nhập vào cột giữa (col2)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    col1, col2, col3 = st.columns([1, 1.3, 1])
     with col2:
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-        # 1. Hiển thị Logo và Tên công ty một cách trang trọng trên cùng của Cột Giữa
-        display_branding(in_sidebar=False)
-
-        # 2. Tiêu đề hướng dẫn đăng nhập trang trọng, sạch sẽ
-        st.markdown(
-            """
-            <div style="text-align: center; margin-top: 6px; margin-bottom: 12px;">
-                <h4 style="color: #1E293B; font-size: 1.05rem; font-weight: 700; margin: 0 0 4px 0;">ĐĂNG NHẬP TÀI KHOẢN</h4>
-                <p style="color: #64748B; font-size: 0.85rem; margin: 0;">Vui lòng nhập tên đăng nhập và mật khẩu được cấp để truy cập</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
 
         user_list = get_users()
 
-        # 3. Form Đăng nhập st.form(key="login_form") - Hỗ trợ nhấn Enter để Submit
+        # Khối Form UX (st.form) - Bọc toàn bộ thẻ đăng nhập, hỗ trợ Enter để Submit
         with st.form(key="login_form", clear_on_submit=False):
+            # Nhận diện Thương hiệu (Branding Header) ở đầu thẻ đăng nhập
+            display_branding(in_sidebar=False)
+
             username_input = st.text_input(
                 "Tên đăng nhập",
                 value="",
-                placeholder="Nhập tên tài khoản của bạn...",
-                help="Tên đăng nhập nội bộ do Quản trị viên cấp"
+                placeholder="Nhập tên đăng nhập...",
             )
             password_input = st.text_input(
                 "Mật khẩu",
                 type="password",
                 value="",
                 placeholder="••••••••",
-                help="Mật khẩu bảo mật cá nhân"
             )
 
-            # Nút Đăng nhập toàn chiều rộng (Full width)
+            # Nút Đăng nhập toàn chiều rộng (use_container_width=True)
             submit_button = st.form_submit_button("Đăng nhập", use_container_width=True)
 
             if submit_button:
@@ -304,7 +311,7 @@ def render_login_screen():
         st.markdown(
             """
             <div style="text-align: center; margin-top: 24px; color: #94A3B8; font-size: 0.75rem;">
-                © Hệ Thống Quản Lý & Rà Soát Luồng Hợp Đồng Nội Bộ • Bảo Mật & Xác Thực Cao
+                © Hệ Thống Quản Lý & Rà Soát Luồng Hợp Đồng Doanh Nghiệp • Bảo Mật & Xác Thực Cao
             </div>
             """,
             unsafe_allow_html=True
