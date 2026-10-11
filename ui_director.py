@@ -255,28 +255,80 @@ def director_view(readonly: bool = False, active_tab: str = None):
                         f_name = chosen_att.get("file_name", "document.pdf")
                         f_kb = chosen_att.get("file_size", len(pdf_bytes) if pdf_bytes else 0) / 1024
 
-                        st.markdown(
-                            f"""
-                            <div style="border-radius: 10px; overflow: hidden; border: 1.5px solid #CBD5E1; background: #FFFFFF; margin-top: 8px; margin-bottom: 8px;">
-                                <div style="background-color: #F8FAFC; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">
-                                        📄 {f_name} ({f_kb:.1f} KB) - Mục: [{chosen_att.get('checklist_item')}]
-                                    </span>
-                                    <a href="{pdf_data_uri}" target="_blank" download="{f_name}" style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 3px 8px; border-radius: 4px; border: 1px solid #BFDBFE;">↗️ Tải / Mở tệp</a>
-                                </div>
-                                <object data="{pdf_data_uri}#toolbar=1" type="application/pdf" width="100%" height="450px" style="border: none; display: block;">
-                                    <embed src="{pdf_data_uri}#toolbar=1" type="application/pdf" width="100%" height="450px" />
-                                    <iframe src="{pdf_data_uri}" width="100%" height="450px" style="border: none;">
-                                        <div style="padding: 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
-                                            Tệp đính kèm tiếng Việt sẵn sàng.<br/>
-                                            <a href="{pdf_data_uri}" download="{f_name}" style="color: #2563EB; font-weight: bold;">Nhấp vào đây để tải tệp PDF về máy</a>
-                                        </div>
-                                    </iframe>
-                                </object>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
+                        view_mode_assign = st.radio(
+                            "Chế độ xem văn bản:",
+                            ["📖 Trình đọc văn bản A4 sắc nét", "📑 Tệp gốc PDF (iFrame / Object)"],
+                            horizontal=True,
+                            key=f"mode_assign_pdf_{target_contract.get('id')}_{att_idx}"
                         )
+
+                        if view_mode_assign == "📖 Trình đọc văn bản A4 sắc nét":
+                            cfg_sys = get_config()
+                            comp_name = cfg_sys.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
+                            chk_item = chosen_att.get("checklist_item", "Dự thảo hợp đồng")
+                            st.markdown(
+                                f"""
+                                <div style="border-radius: 12px; border: 1.5px solid #CBD5E1; box-shadow: 0 4px 10px rgba(0,0,0,0.06); background-color: #F8FAFC; overflow: hidden; margin-top: 8px; margin-bottom: 8px;">
+                                    <div style="background-color: #1E293B; color: #FFFFFF; padding: 8px 14px; font-size: 0.82rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>📖 Văn bản hồ sơ: <b>{f_name}</b></span>
+                                        <span style="color: #6EE7B7; font-size: 0.75rem; font-family: monospace;">Khổ chuẩn A4 • Sắc nét</span>
+                                    </div>
+                                    <div style="padding: 24px; background: #FFFFFF; max-height: 480px; min-height: 480px; overflow-y: auto; font-family: serif; color: #1E293B; border-top: 1px solid #E2E8F0; line-height: 1.6;">
+                                        <div style="text-align: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; margin-bottom: 12px;">
+                                            <div style="font-weight: 800; font-size: 0.85rem; text-transform: uppercase; color: #0F172A;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                                            <div style="font-weight: 700; font-size: 0.78rem; color: #334155;">Độc lập - Tự do - Hạnh phúc</div>
+                                            <div style="font-size: 0.75rem; color: #64748B; margin-top: 2px;">***</div>
+                                        </div>
+                                        <div style="text-align: center; margin-bottom: 14px;">
+                                            <h3 style="font-size: 1.05rem; font-weight: 800; text-transform: uppercase; color: #0F172A; margin: 0;">{target_contract.get('title')}</h3>
+                                            <div style="font-size: 0.78rem; color: #64748B; font-family: sans-serif; margin-top: 4px;">
+                                                Số hiệu: <b>{target_contract.get('id')}</b> | Phân loại: <b>{target_contract.get('contract_type')}</b>
+                                            </div>
+                                            <div style="font-size: 0.78rem; color: #2563EB; font-family: sans-serif; font-weight: 600; margin-top: 2px;">
+                                                Hạng mục hồ sơ: [{chk_item}]
+                                            </div>
+                                        </div>
+                                        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px; font-size: 0.8rem; font-family: sans-serif; margin-bottom: 14px;">
+                                            <div><b>Bên đề xuất (Bên A):</b> {comp_name} - {target_contract.get('department')}</div>
+                                            <div style="margin-top: 3px;"><b>Đối tác (Bên B):</b> <span style="color: #1E3A8A; font-weight: 700;">{target_contract.get('partner_name')}</span></div>
+                                            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #CBD5E1; display: flex; justify-content: space-between; flex-wrap: wrap;">
+                                                <span>Giá trị: <b style="color: #047857;">{target_contract.get('value_vnd', 0):,.0f} VNĐ</b></span>
+                                                <span>Thời hạn: <b>{target_contract.get('effective_date')}</b> đến <b>{target_contract.get('expiration_date')}</b></span>
+                                            </div>
+                                        </div>
+                                        <div style="font-size: 0.8rem; font-family: sans-serif; color: #334155;">
+                                            <p><b>Nội dung thẩm tra hồ sơ:</b><br/>
+                                            Hồ sơ trình ký phục vụ công tác rà soát, thẩm định trước khi ký kết chính thức. Toàn bộ tài liệu, quy cách đính kèm tuân thủ quy chế nội bộ của Tổng Công ty và pháp luật Việt Nam.</p>
+                                            {f'<p><b>Ghi chú đề xuất của đơn vị:</b> <i>"{target_contract.get("notes")}"</i></p>' if target_contract.get("notes") else ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(
+                                f"""
+                                <div style="border-radius: 10px; overflow: hidden; border: 1.5px solid #CBD5E1; background: #FFFFFF; margin-top: 8px; margin-bottom: 8px;">
+                                    <div style="background-color: #F8FAFC; padding: 8px 12px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">
+                                            📄 {f_name} ({f_kb:.1f} KB) - Mục: [{chosen_att.get('checklist_item')}]
+                                        </span>
+                                        <a href="{pdf_data_uri}" target="_blank" download="{f_name}" style="font-size: 0.78rem; font-weight: 600; color: #2563EB; text-decoration: none; background: #EFF6FF; padding: 3px 8px; border-radius: 4px; border: 1px solid #BFDBFE;">↗️ Tải / Mở tệp</a>
+                                    </div>
+                                    <object data="{pdf_data_uri}#toolbar=1" type="application/pdf" width="100%" height="450px" style="border: none; display: block;">
+                                        <embed src="{pdf_data_uri}#toolbar=1" type="application/pdf" width="100%" height="450px" />
+                                        <iframe src="{pdf_data_uri}" width="100%" height="450px" style="border: none;">
+                                            <div style="padding: 16px; text-align: center; color: #64748B; font-size: 0.85rem;">
+                                                Tệp đính kèm tiếng Việt sẵn sàng.<br/>
+                                                <a href="{pdf_data_uri}" download="{f_name}" style="color: #2563EB; font-weight: bold;">Nhấp vào đây để tải tệp PDF về máy</a>
+                                            </div>
+                                        </iframe>
+                                    </object>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
 
                         if pdf_bytes:
                             st.download_button(
