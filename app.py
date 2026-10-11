@@ -1,7 +1,7 @@
 """
 HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - ĐIỂM BẮT ĐẦU CHÍNH (MAIN ENTRY POINT)
-File: app.py (Bước 9 Refactored)
-Chứa: Cấu hình set_page_config, CSS giao diện, Đăng nhập, và Điều hướng Menu theo Role.
+File: app.py (Bước 9.2 Refactored - Giao diện Đăng nhập Chuẩn Production)
+Chứa: Cấu hình set_page_config, CSS giao diện, Đăng nhập bảo mật căn giữa, và Điều hướng Menu theo Role.
 """
 
 import base64
@@ -105,13 +105,53 @@ def apply_custom_css():
             background-color: #FFFFFF !important;
             color: #2563EB !important;
         }
+
+        /* ========================================================== */
+        /* CSS CHUYÊN BIỆT CHO KHUNG ĐĂNG NHẬP (LOGIN CARD DESIGN)    */
+        /* ========================================================== */
+        div[data-testid="stForm"][aria-label="login_form"],
+        form[data-testid="stForm"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+            padding: 28px 24px 24px 24px !important;
+            margin-top: 10px !important;
+        }
+
+        /* Nút đăng nhập: Tràn viền (100%), xanh dương đậm chuyên nghiệp */
+        div[data-testid="stForm"] button[kind="primaryFormSubmit"],
+        div[data-testid="stForm"] .stButton > button {
+            width: 100% !important;
+            background-color: #1E40AF !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 12px 20px !important;
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.02em !important;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25) !important;
+            transition: all 0.2s ease-in-out !important;
+            cursor: pointer !important;
+            margin-top: 12px !important;
+        }
+        div[data-testid="stForm"] button[kind="primaryFormSubmit"]:hover,
+        div[data-testid="stForm"] .stButton > button:hover {
+            background-color: #1D4ED8 !important;
+            box-shadow: 0 6px 16px rgba(30, 64, 175, 0.35) !important;
+            transform: translateY(-1px) !important;
+        }
+        div[data-testid="stForm"] button[kind="primaryFormSubmit"]:active,
+        div[data-testid="stForm"] .stButton > button:active {
+            transform: translateY(0) !important;
+        }
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
 
 apply_custom_css()
 
-# ==============================================================================
 # ==============================================================================
 # 3. NHẬN DIỆN THƯƠNG HIỆU DOANH NGHIỆP TRÊN SIDEBAR & TRANG ĐĂNG NHẬP
 # ==============================================================================
@@ -150,13 +190,13 @@ def display_branding(in_sidebar: bool = True):
     else:
         st.markdown(
             f"""
-            <div style="text-align: center; padding: 20px 16px; margin-bottom: 20px; background: #FFFFFF; border-radius: 16px; border: 1.5px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+            <div style="text-align: center; padding: 24px 20px 20px 20px; margin-bottom: 16px; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
                 <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-                    <img src="{image_src}" alt="Logo Doanh nghiệp" style="height: 72px; width: 72px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);" />
+                    <img src="{image_src}" alt="Logo Doanh nghiệp" style="height: 76px; width: 76px; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);" />
                 </div>
-                <div style="font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
-                <h3 style="color: #0F172A; font-size: 1.15rem; font-weight: 800; margin-top: 4px; margin-bottom: 6px; line-height: 1.35;">{company_name}</h3>
-                <div style="display: inline-block; font-size: 0.75rem; padding: 3px 12px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE; margin-bottom: 4px;">
+                <div style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; color: #2563EB; text-transform: uppercase;">{short_name}</div>
+                <h3 style="color: #0F172A; font-size: 1.15rem; font-weight: 800; margin-top: 4px; margin-bottom: 8px; line-height: 1.35;">{company_name}</h3>
+                <div style="display: inline-block; font-size: 0.75rem; padding: 3px 14px; background-color: #EFF6FF; color: #1D4ED8; border-radius: 9999px; font-weight: 600; border: 1px solid #BFDBFE;">
                     HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG v{system_version}
                 </div>
             </div>
@@ -165,98 +205,106 @@ def display_branding(in_sidebar: bool = True):
         )
 
 # ==============================================================================
-# 4. LOGIC XÁC THỰC & ĐĂNG NHẬP
+# 4. LOGIC XÁC THỰC & ĐĂNG NHẬP (LOGIN CARD CĂN GIỮA, BẢO MẬT CHUẨN PRODUCTION)
 # ==============================================================================
 def render_login_screen():
     # Hiển thị Logo & Thương hiệu trên Sidebar ngay cả khi chưa đăng nhập
     display_branding(in_sidebar=True)
 
-    col_left, col_center, col_right = st.columns([1, 1.8, 1])
-    with col_center:
-        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-        # Hiển thị Logo và Thông tin Doanh nghiệp mới nhất ngay phía trên Form Đăng nhập
+    # Chia cột cân xứng: Đẩy toàn bộ khu vực đăng nhập vào cột giữa (col2)
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+        # 1. Hiển thị Logo và Tên công ty một cách trang trọng trên cùng của Cột Giữa
         display_branding(in_sidebar=False)
 
+        # 2. Tiêu đề hướng dẫn đăng nhập trang trọng, sạch sẽ
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 16px;">
-                <p style="color: #64748B; font-size: 0.90rem; margin: 0;">Cổng đăng nhập an toàn dành cho cán bộ nhân viên nội bộ</p>
+            <div style="text-align: center; margin-top: 6px; margin-bottom: 12px;">
+                <h4 style="color: #1E293B; font-size: 1.05rem; font-weight: 700; margin: 0 0 4px 0;">ĐĂNG NHẬP TÀI KHOẢN</h4>
+                <p style="color: #64748B; font-size: 0.85rem; margin: 0;">Vui lòng nhập tên đăng nhập và mật khẩu được cấp để truy cập</p>
             </div>
             """,
             unsafe_allow_html=True
         )
 
         user_list = get_users()
-        user_options = ["-- Chọn tài khoản mẫu đăng nhập nhanh --"] + [
-            f"{u['username']} - {u['full_name']} ({u['role']})" for u in user_list
-        ]
-        selected_sample = st.selectbox("Chọn nhanh tài khoản thử nghiệm:", user_options)
 
-        default_user = ""
-        default_pwd = ""
-        if selected_sample != "-- Chọn tài khoản mẫu đăng nhập nhanh --":
-            u_name = selected_sample.split(" - ")[0]
-            default_user = u_name
-            matched = next((u for u in user_list if u["username"] == u_name), None)
-            if matched:
-                default_pwd = matched.get("password", "")
+        # 3. Form Đăng nhập st.form(key="login_form") - Hỗ trợ nhấn Enter để Submit
+        with st.form(key="login_form", clear_on_submit=False):
+            username_input = st.text_input(
+                "Tên đăng nhập",
+                value="",
+                placeholder="Nhập tên tài khoản của bạn...",
+                help="Tên đăng nhập nội bộ do Quản trị viên cấp"
+            )
+            password_input = st.text_input(
+                "Mật khẩu",
+                type="password",
+                value="",
+                placeholder="••••••••",
+                help="Mật khẩu bảo mật cá nhân"
+            )
 
-        with st.form("form_dang_nhap", clear_on_submit=False):
-            username_val = st.text_input("Tên đăng nhập", value=default_user, placeholder="admin / pche_giamdoc / pche_nhanvien1")
-            password_val = st.text_input("Mật khẩu", type="password", value=default_pwd, placeholder="admin123 / 123456 / pc123")
-            submit_login = st.form_submit_button("Đăng nhập hệ thống", use_container_width=True)
+            # Nút Đăng nhập toàn chiều rộng (Full width)
+            submit_button = st.form_submit_button("Đăng nhập", use_container_width=True)
 
-            if submit_login:
-                u_input = username_val.strip()
-                p_input = password_val.strip()
+            if submit_button:
+                u_input = username_input.strip()
+                p_input = password_input.strip()
 
-                # Kiểm tra danh sách người dùng trong hệ thống
-                matched_account = next((u for u in user_list if u.get("username") == u_input and str(u.get("password")) == p_input), None)
-
-                # Fallback bảo đảm đặc quyền Admin và Ban Giám đốc luôn đăng nhập thành công
-                if not matched_account:
-                    if u_input == "admin" and p_input == "admin123":
-                        matched_account = {
-                            "username": "admin",
-                            "full_name": "Quản trị viên Hệ thống",
-                            "role": "Admin",
-                            "department": "Ban Giám đốc",
-                            "email": "info@cns.com.vn"
-                        }
-                    elif u_input in ["pche_giamdoc", "giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
-                        matched_account = {
-                            "username": "pche_giamdoc",
-                            "full_name": "Lê Thị Phương",
-                            "role": "Ban Giám đốc",
-                            "department": "Phòng Pháp chế",
-                            "email": "phuonglt@cns.com.vn"
-                        }
-                    elif u_input in ["pche_nhanvien1", "phapche01"] and p_input in ["pc123"]:
-                        matched_account = {
-                            "username": "pche_nhanvien1",
-                            "full_name": "Nguyễn Kim An",
-                            "role": "Chuyên viên Pháp chế",
-                            "department": "Phòng Pháp chế",
-                            "email": "annk@cns.com.vn"
-                        }
-
-                if matched_account:
-                    st.session_state["logged_in"] = True
-                    st.session_state["user"] = matched_account
-                    st.session_state["role"] = matched_account.get("role", "Phòng ban đề nghị")
-                    st.success(f"Đăng nhập thành công! Chào mừng {matched_account.get('full_name')}.")
-                    st.rerun()
+                if not u_input or not p_input:
+                    st.warning("Vui lòng điền đầy đủ Tên đăng nhập và Mật khẩu!")
                 else:
-                    st.error("Tên đăng nhập hoặc mật khẩu không chính xác! Vui lòng thử 'admin' / 'admin123'.")
+                    # Kiểm tra tài khoản trong database hệ thống (users.json)
+                    matched_account = next(
+                        (u for u in user_list if u.get("username") == u_input and str(u.get("password")) == p_input),
+                        None
+                    )
 
+                    # Fallback bảo đảm tài khoản quản trị và lãnh đạo chủ chốt
+                    if not matched_account:
+                        if u_input == "admin" and p_input == "admin123":
+                            matched_account = {
+                                "username": "admin",
+                                "full_name": "Quản trị viên Hệ thống",
+                                "role": "Admin",
+                                "department": "Ban Giám đốc",
+                                "email": "info@cns.com.vn"
+                            }
+                        elif u_input in ["pche_giamdoc", "giamdoc", "giamdoc01"] and p_input in ["123456", "gd123"]:
+                            matched_account = {
+                                "username": "pche_giamdoc",
+                                "full_name": "Lê Thị Phương",
+                                "role": "Ban Giám đốc",
+                                "department": "Phòng Pháp chế",
+                                "email": "phuonglt@cns.com.vn"
+                            }
+                        elif u_input in ["pche_nhanvien1", "phapche01"] and p_input in ["pc123"]:
+                            matched_account = {
+                                "username": "pche_nhanvien1",
+                                "full_name": "Nguyễn Kim An",
+                                "role": "Chuyên viên Pháp chế",
+                                "department": "Phòng Pháp chế",
+                                "email": "annk@cns.com.vn"
+                            }
+
+                    if matched_account:
+                        st.session_state["logged_in"] = True
+                        st.session_state["user"] = matched_account
+                        st.session_state["role"] = matched_account.get("role", "Phòng ban đề nghị")
+                        st.success(f"Đăng nhập thành công! Xin chào, {matched_account.get('full_name')}.")
+                        st.rerun()
+                    else:
+                        st.error("Tên đăng nhập hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!")
+
+        # Chân trang bản quyền kín đáo
         st.markdown(
             """
-            <div style="margin-top: 20px; padding: 14px 16px; background-color: #F1F5F9; border-radius: 10px; border-left: 4px solid #3B82F6; font-size: 0.85rem; color: #334155;">
-                <strong>Danh sách tài khoản dùng thử hệ thống:</strong><br/>
-                • <b>Quản trị viên (Admin):</b> <code>admin</code> / <code>admin123</code><br/>
-                • <b>Ban Giám đốc:</b> <code>pche_giamdoc</code> (<code>123456</code>)<br/>
-                • <b>Chuyên viên Pháp chế:</b> <code>pche_nhanvien1</code> / <code>pc123</code><br/>
-                • <b>Chuyên viên Pháp chế 2:</b> <code>pche_nhanvien2</code> / <code>pc123</code>
+            <div style="text-align: center; margin-top: 24px; color: #94A3B8; font-size: 0.75rem;">
+                © Hệ Thống Quản Lý & Rà Soát Luồng Hợp Đồng Nội Bộ • Bảo Mật & Xác Thực Cao
             </div>
             """,
             unsafe_allow_html=True
