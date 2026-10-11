@@ -5,25 +5,38 @@ Kiến trúc:
 - Bàn làm việc Giám đốc Pháp chế và Chế độ Giám sát Read-Only dành cho Admin ('God Mode').
 - 4 Tab Nghiệp vụ hoàn chỉnh:
     1. Dashboard / Tổng quan:
-       * Clickable Metric Drill-down: Thẻ chỉ số kèm nút chuyển trang ngay lập tức.
-       * Bộ lọc động trạng thái để lọc nhanh danh sách bên dưới.
-       * 2 biểu đồ phân tích trực quan: Trạng thái & Mức độ rủi ro.
-       * Bảng dữ liệu tương tác đầy đủ.
+       * Clickable Metric Drill-down: Thẻ chỉ số kèm nút chuyển trang trực tiếp (st.session_state & st.rerun).
+       * 2 biểu đồ phân tích trực quan: Phân bổ Trạng thái & Mức độ rủi ro hợp đồng.
+       * Bộ lọc động trạng thái và tìm kiếm thời gian thực.
     2. Phân công hồ sơ:
-       * Chi tiết thông tin hồ sơ & Trình đọc văn bản A4 / PDF nhúng chuẩn.
-       * Giao diện Action Bar ở Chân trang (Bottom Footer Section) phân công cho chuyên viên pháp chế.
+       * Chi tiết hồ sơ & Trình đọc văn bản A4 sắc nét / PDF nhúng chuẩn.
+       * Trợ lý AI Gemini 2.5 Flash Rà soát Toàn văn PDF & Hỏi đáp nhanh.
+       * Action Bar ở Chân trang (Bottom Footer Section) giao việc cho chuyên viên pháp chế.
     3. Điều chuyển nhân sự:
-       * Chọn hồ sơ đang rà soát, xem lịch sử phân công/điều chuyển.
-       * Giao diện Action Bar ở Chân trang điều chuyển sang nhân sự mới kèm lý do.
+       * Xem hồ sơ đang rà soát, lịch sử điều chuyển các lần trước.
+       * Action Bar ở Chân trang điều phối sang chuyên viên tiếp nhận mới kèm lý do.
     4. Phê duyệt & Ban hành:
-       * Bố cục 2 cột: Cột trái Trình đối chiếu văn bản (A4 / PDF gốc), Cột phải Toàn bộ ý kiến checklist của Pháp chế.
-       * Action Bar & Hướng dẫn ở Chân trang (Bottom Footer): Ý kiến Giám đốc, Ký duyệt phát hành, Yêu cầu làm lại.
+       * Bố cục 2 cột: Cột trái Trình đối chiếu văn bản PDF/A4, Cột phải Toàn bộ ý kiến checklist của Pháp chế.
+       * Trợ lý AI Gemini 2.5 Flash: Phân tích 4 nhóm rủi ro trọng yếu & Hỏi đáp điều khoản.
+       * Action Bar & Hướng dẫn ở Chân trang: Ý kiến chỉ đạo, Ký duyệt phát hành, Yêu cầu làm lại.
        * Xuất Phiếu góp ý PDF tiếng Việt Unicode và nút Tải về tự động.
 """
 
+import os
+import json
 import base64
+import urllib.request
+import urllib.error
 import pandas as pd
 import streamlit as st
+
+# Thử import SDK google.generativeai nếu môi trường đã cài đặt
+try:
+    import google.generativeai as genai
+    HAS_GENAI_LIB = True
+except ImportError:
+    genai = None
+    HAS_GENAI_LIB = False
 
 from db_utils import (
     get_contracts,
@@ -37,6 +50,333 @@ from workflow_engine import (
     generate_review_pdf
 )
 
+# ==============================================================================
+# HÀM BỔ TRỢ: KẾT NỐI & GỌI GEMINI 2.5 FLASH MULTIMODAL CHO FILE PDF
+# ==============================================================================
+def get_effective_gemini_api_key():
+    """Lấy API Key từ session_state, biến môi trường hoặc config.json"""
+    if st.session_state.get("gemini_api_key_custom"):
+        return st.session_state["gemini_api_key_custom"].strip()
+    
+    env_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if env_key:
+        return env_key
+        
+    cfg = get_config()
+    cfg_key = cfg.get("gemini_api_key", "").strip()
+    if cfg_key:
+        return cfg_key
+        
+    return ""
+
+def call_gemini_2_5_flash_pdf(pdf_bytes: bytes, prompt_text: str, api_key: str) -> str:
+    """
+    Gọi Gemini 2.5 Flash phân tích file PDF.
+    Ưu tiên dùng google.generativeai SDK; nếu chưa có thì fallback sang REST API chuẩn của Gemini.
+    Đảm bảo tương thích 100% trên cả Streamlit Cloud và mọi môi trường Python.
+    """
+    if not api_key:
+        raise ValueError("Chưa cấu hình GEMINI_API_KEY. Vui lòng nhập API Key để tiếp tục.")
+
+    b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+
+    # Cách 1: Sử dụng google.generativeai SDK nếu có
+    if HAS_GENAI_LIB and genai is not None:
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            pdf_part = {
+                "mime_type": "application/pdf",
+                "data": pdf_bytes
+            }
+            response = model.generate_content([pdf_part, prompt_text])
+            if hasattr(response, "text") and response.text:
+                return response.text
+        except Exception:
+            # Nếu SDK gặp vấn đề về phiên bản, fallback sang REST API bên dưới
+            pass
+
+    # Cách 2: Gọi trực tiếp Google Generative Language REST API (Chuẩn Gemini 2.5 Flash)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "inlineData": {
+                            "mimeType": "application/pdf",
+                            "data": b64_pdf
+                        }
+                    },
+                    {
+                        "text": prompt_text
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 4096
+        }
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=90) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            candidates = result.get("candidates", [])
+            if candidates:
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+                text_pieces = [p.get("text", "") for p in parts if "text" in p]
+                if text_pieces:
+                    return "".join(text_pieces)
+            return "Không nhận được phản hồi nội dung văn bản từ mô hình Gemini 2.5 Flash."
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")
+        try:
+            err_json = json.loads(err_body)
+            msg = err_json.get("error", {}).get("message", err_body)
+        except Exception:
+            msg = err_body
+        raise RuntimeError(f"Lỗi kết nối Gemini API ({e.code}): {msg}")
+    except Exception as e:
+        raise RuntimeError(f"Lỗi khi gửi yêu cầu tới Gemini: {str(e)}")
+
+def render_gemini_api_key_box():
+    """Hộp cấu hình API Key thân thiện khi hệ thống chưa có key"""
+    current_key = get_effective_gemini_api_key()
+    if not current_key:
+        st.markdown(
+            """
+            <div style="background: #EFF6FF; border: 1.5px solid #93C5FD; border-radius: 12px; padding: 14px 18px; margin-bottom: 14px;">
+                <div style="font-weight: 800; color: #1E40AF; font-size: 0.92rem; display: flex; align-items: center; gap: 8px;">
+                    <span>🧠 KÍCH HOẠT TRỢ LÝ AI GEMINI 2.5 FLASH RÀ SOÁT TOÀN VĂN</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #1E3A8A; margin-top: 6px; line-height: 1.5;">
+                    Để kích hoạt tính năng thẩm định rủi ro hợp đồng tự động đa phương thức (Multimodal PDF Review), vui lòng cung cấp Gemini API Key.<br/>
+                    👉 Bạn có thể nhận khóa miễn phí ngay tại: 
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #2563EB; font-weight: 700; text-decoration: underline;">
+                        Google AI Studio (Nhận API Key Miễn Phí)
+                    </a>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        col_k1, col_k2 = st.columns([3, 1])
+        with col_k1:
+            entered_key = st.text_input(
+                "Dán mã Gemini API Key của bạn vào đây:",
+                type="password",
+                placeholder="AIzaSy...",
+                key="input_director_gemini_key",
+                label_visibility="collapsed"
+            )
+        with col_k2:
+            if st.button("🔑 Lưu API Key", key="btn_save_dir_api_key", use_container_width=True):
+                if entered_key.strip():
+                    st.session_state["gemini_api_key_custom"] = entered_key.strip()
+                    st.success("Đã ghi nhận API Key cho phiên làm việc hiện tại!")
+                    st.rerun()
+                else:
+                    st.warning("Vui lòng nhập API Key hợp lệ.")
+        return False
+    return True
+
+def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, panel_prefix: str):
+    """
+    Bảng điều khiển AI Gemini 2.5 Flash:
+    - Nút bấm '🧠 Gemini 2.5 Flash: Rà soát Rủi ro Toàn văn'
+    - Phân tích 4 nhóm rủi ro pháp lý
+    - Hỏi đáp trực tiếp về điều khoản trong hợp đồng (Document Q&A)
+    """
+    st.markdown(
+        """
+        <div style="background: linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%); border: 1.5px solid #86EFAC; border-radius: 12px; padding: 14px 18px; margin-top: 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.15rem;">🧠</span>
+                    <span style="font-weight: 800; font-size: 0.95rem; color: #065F46;">TRỢ LÝ PHÁP LÝ AI - GEMINI 2.5 FLASH (MULTIMODAL PDF)</span>
+                </div>
+                <span style="font-size: 0.75rem; background: #DCFCE7; color: #166534; font-weight: 700; padding: 2px 8px; border-radius: 20px;">
+                    Model: gemini-2.5-flash
+                </span>
+            </div>
+            <div style="font-size: 0.82rem; color: #166534; margin-top: 4px;">
+                Đọc trực tiếp toàn văn file PDF nhị phân, trích xuất và phân tích 4 nhóm rủi ro trọng yếu kèm Hỏi - Đáp điều khoản nhanh.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    render_gemini_api_key_box()
+    active_key = get_effective_gemini_api_key()
+
+    pdf_b64 = chosen_attachment.get("file_base64", "").strip() if chosen_attachment else ""
+    if not pdf_b64:
+        st.info("Tài liệu đang chọn không có dữ liệu Base64 PDF để gửi tới Gemini.")
+        return
+
+    # Giải mã nhị phân an toàn
+    raw_b64 = pdf_b64
+    if "base64," in raw_b64:
+        raw_b64 = raw_b64.split("base64,", 1)[1]
+    raw_b64 = "".join(raw_b64.split())
+    if len(raw_b64) % 4:
+        raw_b64 += "=" * (4 - len(raw_b64) % 4)
+    
+    try:
+        pdf_raw_bytes = base64.b64decode(raw_b64)
+    except Exception:
+        pdf_raw_bytes = None
+
+    if not pdf_raw_bytes:
+        st.error("Không thể giải mã dữ liệu PDF nhị phân từ tài liệu đính kèm.")
+        return
+
+    c_id = contract.get("id")
+    file_name = chosen_attachment.get("file_name", "document.pdf")
+    review_cache_key = f"gemini_review_result_{c_id}_{file_name}"
+
+    col_btn_ai, col_clear_ai = st.columns([3, 1])
+    with col_btn_ai:
+        btn_run_ai = st.button(
+            "🧠 Gemini 2.5 Flash: Rà soát Rủi ro Toàn văn",
+            type="primary",
+            use_container_width=True,
+            key=f"btn_run_gemini_full_{panel_prefix}_{c_id}"
+        )
+    with col_clear_ai:
+        if st.button("🔄 Làm mới AI", key=f"btn_reset_gemini_{panel_prefix}_{c_id}", use_container_width=True):
+            st.session_state.pop(review_cache_key, None)
+            st.session_state.pop(f"qa_history_{panel_prefix}_{c_id}", None)
+            st.rerun()
+
+    # THỰC THI PHÂN TÍCH RỦI RO
+    if btn_run_ai:
+        if not active_key:
+            st.warning("Vui lòng nhập API Key ở ô phía trên hoặc tại [Google AI Studio](https://aistudio.google.com/app/apikey) để thực thi!")
+        else:
+            with st.spinner("🤖 Gemini 2.5 Flash đang thẩm định toàn văn tệp PDF... Quá trình này mất khoảng 5-15 giây..."):
+                prompt_analysis = f"""
+Bạn là Trưởng ban Pháp lý Doanh nghiệp Cấp cao (Senior Legal Counsel / Chief Legal Officer) với hơn 20 năm kinh nghiệm rà soát hợp đồng kinh tế và thương mại.
+Hồ sơ rà soát:
+- Mã hợp đồng: {contract.get('id')}
+- Tiêu đề: {contract.get('title')}
+- Đối tác: {contract.get('partner_name')}
+- Giá trị: {contract.get('value_vnd', 0):,.0f} VNĐ
+- Phòng ban đề xuất: {contract.get('department')}
+- Tệp đính kèm: {file_name}
+
+HÃY ĐỌC TOÀN VĂN TỆP PDF ĐÍNH KÈM VÀ LẬP BÁO CÁO ĐÁNH GIÁ RỦI RO CHI TIẾT BẰNG TIẾNG VIỆT THEO CHUẨN 4 NHÓM SAU:
+
+### 1. RỦI RO VỀ ĐIỀU KHOẢN THANH TOÁN & NGHIỆM THU
+- Nêu rõ tiến độ thanh toán, điều kiện nghiệm thu, tỷ lệ giữ lại bảo hành.
+- Phân tích rủi ro chiếm dụng vốn, chậm thanh toán, hoặc điều kiện nghiệm thu bất lợi.
+
+### 2. RỦI RO VỀ PHẠT VI PHẠM & BỒI THƯỜNG THIỆT HẠI
+- Mức phạt vi phạm hợp đồng (đối chiếu quy định tối đa 8% theo Luật Thương mại 2005 hoặc thỏa thuận).
+- Giới hạn trách nhiệm bồi thường (capping liability) và loại trừ thiệt hại gián tiếp.
+
+### 3. RỦI RO VỀ ĐƠN PHƯƠNG CHẤM DỨT & GIẢI QUYẾT TRANH CHẤP
+- Quyền đơn phương chấm dứt hợp đồng của các bên có cân bằng không?
+- Thời hạn thông báo trước, cơ quan giải quyết tranh chấp (Trọng tài VIAC hay Tòa án nhân dân có thẩm quyền).
+
+### 4. CÁC ĐIỀU KHOẢN BẤT LỢI / MẬP MỜ & ĐỀ XUẤT CHỈNH SỬA CỤ THỂ
+- Trích dẫn cụ thể câu chữ/điều khoản gây rủi ro.
+- Đưa ra phương án câu chữ sửa đổi kiến nghị (Đoạn cũ -> Đoạn đề xuất sửa).
+
+### 5. KẾT LUẬN & KHUYẾN NGHỊ DÀNH CHO GIÁM ĐỐC
+- Đánh giá tổng quan mức độ rủi ro: [THẤP - ĐỦ ĐIỀU KIỆN KÝ] / [TRUNG BÌNH - CẦN SỬA ĐỔI] / [CAO - KHÔNG NÊN KÝ].
+- Tóm tắt 1-2 chỉ đạo cốt lõi Giám đốc cần yêu cầu đối tác chỉnh sửa trước khi đặt bút ký.
+"""
+                try:
+                    ai_result = call_gemini_2_5_flash_pdf(pdf_raw_bytes, prompt_analysis, active_key)
+                    st.session_state[review_cache_key] = ai_result
+                    st.success("✅ Gemini 2.5 Flash đã hoàn tất phân tích toàn văn hợp đồng!")
+                except Exception as err:
+                    st.error(f"⚠️ Không thể thực thi phân tích AI: {str(err)}")
+
+    # HIỂN THỊ KẾT QUẢ PHÂN TÍCH RỦI RO
+    cached_report = st.session_state.get(review_cache_key)
+    if cached_report:
+        st.markdown(
+            f"""
+            <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 18px 20px; margin-top: 10px; margin-bottom: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+                <div style="border-bottom: 1.5px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 800; color: #0F172A; font-size: 0.95rem;">📊 BÁO CÁO THẨM ĐỊNH RỦI RO TOÀN VĂN TỪ GEMINI 2.5 FLASH</span>
+                    <span style="font-size: 0.75rem; color: #64748B;">Hồ sơ: <b>{contract.get('id')}</b></span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown(cached_report)
+
+        # TÍNH NĂNG HỎI ĐÁP NHANH VỚI HỢP ĐỒNG (DOCUMENT Q&A)
+        st.markdown("---")
+        st.markdown(
+            "<div style='font-size: 0.88rem; font-weight: 700; color: #1E293B; margin-bottom: 4px;'>"
+            "💬 Hỏi đáp nhanh với Hợp đồng (Document Q&A)"
+            "</div>",
+            unsafe_allow_html=True
+        )
+        qa_history_key = f"qa_history_{panel_prefix}_{c_id}"
+        if qa_history_key not in st.session_state:
+            st.session_state[qa_history_key] = []
+
+        # Hiển thị lịch sử Q&A
+        for q_item in st.session_state[qa_history_key]:
+            with st.chat_message("user"):
+                st.write(q_item["question"])
+            with st.chat_message("assistant", avatar="⚖️"):
+                st.markdown(q_item["answer"])
+
+        col_q_input, col_q_btn = st.columns([4, 1])
+        with col_q_input:
+            user_question = st.text_input(
+                "Nhập câu hỏi của bạn:",
+                placeholder="Ví dụ: Thời hạn bảo hành quy định thế nào? Có điều khoản tự động gia hạn không?...",
+                key=f"input_qa_{panel_prefix}_{c_id}",
+                label_visibility="collapsed"
+            )
+        with col_q_btn:
+            btn_ask = st.button("Gửi câu hỏi", key=f"btn_ask_{panel_prefix}_{c_id}", use_container_width=True)
+
+        if btn_ask and user_question.strip():
+            if not active_key:
+                st.warning("Vui lòng nhập API Key để đặt câu hỏi.")
+            else:
+                with st.spinner("🤖 Đang tra cứu điều khoản trong tệp PDF..."):
+                    qa_prompt = f"""
+Bạn là Chuyên gia Pháp lý Doanh nghiệp. Dưới đây là câu hỏi của Giám đốc về hợp đồng đính kèm:
+Câu hỏi: "{user_question.strip()}"
+
+Yêu cầu:
+1. Đọc tệp PDF đính kèm và trả lời chính xác, ngắn gọn, súc tích.
+2. Trích dẫn chính xác Số điều khoản (Ví dụ: Điều 5.2, Khoản 3 Điều 8...) và trang liên quan trong văn bản.
+3. Nếu hợp đồng KHÔNG đề cập nội dung này, hãy trả lời rõ ràng: "Trong văn bản hợp đồng không có điều khoản quy định về nội dung này."
+"""
+                    try:
+                        ans_text = call_gemini_2_5_flash_pdf(pdf_raw_bytes, qa_prompt, active_key)
+                        st.session_state[qa_history_key].append({
+                            "question": user_question.strip(),
+                            "answer": ans_text
+                        })
+                        st.rerun()
+                    except Exception as q_err:
+                        st.error(f"Lỗi trả lời câu hỏi: {str(q_err)}")
+
+# ==============================================================================
+# GIAO DIỆN CHÍNH: DIRECTOR_VIEW
+# ==============================================================================
 def director_view(readonly: bool = False, active_tab: str = None):
     """
     Giao diện Quản trị Điều hành của Giám đốc Pháp chế & Giám sát Read-Only dành cho Admin.
@@ -46,11 +386,10 @@ def director_view(readonly: bool = False, active_tab: str = None):
     current_username = current_user.get("username", "")
     current_fullname = current_user.get("full_name", "Giám đốc Pháp chế")
 
-    # CSS tùy chỉnh riêng cho màn hình Giám đốc (Thẻ chỉ số, Action Footer)
+    # CSS giao diện Doanh nghiệp cao cấp
     st.markdown(
         """
         <style>
-        /* Card thống kê tương tác */
         .dir-metric-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
@@ -85,14 +424,12 @@ def director_view(readonly: bool = False, active_tab: str = None):
             padding: 3px 8px;
             border-radius: 20px;
         }
-        
-        /* Action Footer Bar ở chân trang */
         .dir-footer-action-bar {
             background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
             border: 1.5px solid #CBD5E1;
             border-radius: 14px;
             padding: 20px 24px;
-            margin-top: 24px;
+            margin-top: 28px;
             margin-bottom: 16px;
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
         }
@@ -116,7 +453,6 @@ def director_view(readonly: bool = False, active_tab: str = None):
         unsafe_allow_html=True
     )
 
-    # Tiêu đề giao diện
     if readonly:
         st.title("🛡️ Giám Sát Hệ Thống Hợp Đồng (Read-Only Mode)")
         st.markdown(
@@ -140,7 +476,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
             f"Bộ phận: **{current_user.get('department', 'Ban Giám đốc')}**"
         )
 
-    # Đồng bộ hóa Tab dựa vào session_state hoặc active_tab
+    # Điều phối Tab linh hoạt thông qua st.session_state (Clickable Drill-down)
     if "director_active_tab_override" in st.session_state and st.session_state["director_active_tab_override"]:
         effective_tab = st.session_state.pop("director_active_tab_override")
     else:
@@ -179,7 +515,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
     company_name = sys_config.get("company_name", "TỔNG CÔNG TY CÔNG NGHIỆP SÀI GÒN - TNHH MỘT THÀNH VIÊN")
 
     # ==========================================================================
-    # TAB 1: DASHBOARD TỔNG QUAN (CLICKABLE METRICS, INTERACTIVE DRILL-DOWN)
+    # TAB 1: DASHBOARD / TỔNG QUAN (CLICKABLE METRIC CARDS DRILL-DOWN)
     # ==========================================================================
     with tab_stats:
         st.subheader("📊 Báo Cáo & Thống Kê Tổng Quan Hợp Đồng")
@@ -197,7 +533,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
 
             st.markdown(
                 "<div style='font-size: 0.85rem; color: #64748B; margin-bottom: 8px;'>"
-                "💡 <i>Nhấp vào các nút thao tác bên dưới mỗi thẻ chỉ số để chuyển ngay đến màn hình xử lý hồ sơ tương ứng.</i>"
+                "💡 <i>Nhấp vào các nút thao tác trực tiếp dưới mỗi thẻ chỉ số để chuyển ngay đến quy trình xử lý mà không cần chuyển menu thủ công.</i>"
                 "</div>",
                 unsafe_allow_html=True
             )
@@ -216,7 +552,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     """,
                     unsafe_allow_html=True
                 )
-                if st.button("📋 Xem tất cả hồ sơ", key="btn_drill_all", use_container_width=True):
+                if st.button("📋 Xem toàn bộ danh sách", key="btn_drill_all", use_container_width=True):
                     st.session_state["dir_dashboard_status_filter"] = "Tất cả"
                     st.rerun()
 
@@ -245,7 +581,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     <div class="dir-metric-card" style="border-top: 4px solid #F59E0B;">
                         <div class="dir-metric-title">⏳ Đang rà soát</div>
                         <div class="dir-metric-value" style="color: #D97706;">{in_review}</div>
-                        <span class="dir-metric-badge" style="background: #FEF3C7; color: #B45309;">Chuyên viên thẩm định</span>
+                        <span class="dir-metric-badge" style="background: #FEF3C7; color: #B45309;">Chuyên viên thụ lý</span>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -262,14 +598,14 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 st.markdown(
                     f"""
                     <div class="dir-metric-card" style="border-top: 4px solid #10B981;">
-                        <div class="dir-metric-title">✍️ Chờ Giám đốc duyệt</div>
+                        <div class="dir-metric-title">✍️ Chờ phê duyệt</div>
                         <div class="dir-metric-value" style="color: {'#B45309' if pending_approval > 0 else '#059669'};">{pending_approval}</div>
                         <span class="dir-metric-badge" style="background: {badge_appr_bg}; color: {badge_appr_cl};">{badge_appr_tx}</span>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
-                btn_appr_label = "✍️ Chuyển đến Ký duyệt" if not readonly else "👁️ Giám sát Phê duyệt"
+                btn_appr_label = "✍️ Xem danh sách phê duyệt" if not readonly else "👁️ Giám sát Phê duyệt"
                 if st.button(btn_appr_label, key="btn_drill_approve", type="primary" if pending_approval > 0 else "secondary", use_container_width=True):
                     st.session_state["director_active_tab_override"] = "approve"
                     st.rerun()
@@ -312,7 +648,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 })
                 st.bar_chart(df_risk.set_index("Mức độ rủi ro"), color="#DC2626", use_container_width=True)
 
-            # BẢNG TƯƠNG TÁC DANH SÁCH HỒ SƠ VỚI BỘ LỌC ĐỘNG
+            # BẢNG TƯƠNG TÁC DANH SÁCH HỒ SƠ
             st.markdown("---")
             st.markdown("##### 📋 Danh Sách Hồ Sơ Tương Tác & Tra Cứu Nhanh")
             
@@ -326,7 +662,6 @@ def director_view(readonly: bool = False, active_tab: str = None):
             with filter_col2:
                 search_kw = st.text_input("Tìm kiếm theo Mã HĐ, Tên hợp đồng, Đối tác, Phòng ban:", placeholder="Nhập từ khóa tìm kiếm...", key="input_dash_search")
 
-            # Áp dụng bộ lọc
             filtered_df = df_contracts.copy()
             if chosen_status != "Tất cả":
                 if chosen_status == "Hoàn tất":
@@ -363,11 +698,11 @@ def director_view(readonly: bool = False, active_tab: str = None):
             )
 
     # ==========================================================================
-    # TAB 2: PHÂN CÔNG HỒ SƠ (FOOTER ACTION BAR DƯỚI CÙNG)
+    # TAB 2: PHÂN CÔNG HỒ SƠ (FOOTER ACTION BAR DƯỚI CÙNG & GEMINI AI)
     # ==========================================================================
     with tab_assign:
         st.subheader("📋 Phân Công Hồ Sơ Cho Chuyên Viên Pháp Chế")
-        st.markdown("Xem chi tiết hồ sơ đề xuất, thẩm tra nội dung văn bản đính kèm, sau đó quyết định giao việc tại khu vực chân trang.")
+        st.markdown("Xem chi tiết hồ sơ đề xuất, rà soát văn bản đính kèm cùng AI, sau đó quyết định giao việc tại khu vực chân trang.")
 
         pending_list = [c for c in all_contracts if c.get("status") == "Chờ Giám đốc phân công"]
 
@@ -388,7 +723,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
 
             st.markdown("---")
 
-            # 1. KHỐI THÔNG TIN CHI TIẾT HỒ SƠ
+            # 1. THÔNG TIN CHI TIẾT HỒ SƠ
             st.markdown("#### 📄 1. Thông Tin Chi Tiết Hồ Sơ")
             col_info1, col_info2, col_info3 = st.columns(3)
             with col_info1:
@@ -407,10 +742,11 @@ def director_view(readonly: bool = False, active_tab: str = None):
             if target_contract.get("notes"):
                 st.info(f"💡 **Ghi chú/Đề xuất từ phòng ban:** {target_contract.get('notes')}")
 
-            # 2. KHỐI TRÌNH ĐỌC VĂN BẢN HỒ SƠ (ĐỐI CHIẾU PDF)
+            # 2. KHỐI TRÌNH ĐỌC VĂN BẢN HỒ SƠ
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             st.markdown("#### 📎 2. Văn Bản & Tài Liệu Đính Kèm Cần Rà Soát")
             attachments = target_contract.get("attachments", [])
+            chosen_att = None
             
             if not attachments:
                 st.warning("Hồ sơ này chưa có tệp đính kèm nào.")
@@ -420,7 +756,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     for i, att in enumerate(attachments)
                 ]
                 att_idx = st.selectbox(
-                    "Chọn tệp tài liệu trong hồ sơ để đọc:",
+                    "Chọn tệp tài liệu trong hồ sơ để kiểm tra:",
                     range(len(attachments)),
                     format_func=lambda i: att_labels[i],
                     key=f"director_att_sel_{target_contract.get('id')}"
@@ -433,9 +769,8 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     if "base64," in raw_b64:
                         raw_b64 = raw_b64.split("base64,", 1)[1]
                     raw_b64 = "".join(raw_b64.split())
-                    missing_pad = len(raw_b64) % 4
-                    if missing_pad:
-                        raw_b64 += "=" * (4 - missing_pad)
+                    if len(raw_b64) % 4:
+                        raw_b64 += "=" * (4 - len(raw_b64) % 4)
                     pdf_data_uri = f"data:application/pdf;base64,{raw_b64}"
 
                     try:
@@ -533,6 +868,11 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 else:
                     st.info("Tệp đính kèm không có dữ liệu chuỗi nội dung.")
 
+            # TÍCH HỢP GEMINI 2.5 FLASH TẠI MÀN HÌNH PHÂN CÔNG
+            if chosen_att:
+                with st.expander("🤖 Trợ lý AI Gemini 2.5 Flash: Đánh giá nhanh rủi ro tệp hồ sơ này", expanded=False):
+                    render_gemini_ai_contract_panel(target_contract, chosen_att, "assign_panel")
+
             # 3. ACTION BAR & HƯỚNG DẪN Ở CHÂN TRANG (BOTTOM SECTION)
             st.markdown(
                 """
@@ -549,7 +889,6 @@ def director_view(readonly: bool = False, active_tab: str = None):
                 unsafe_allow_html=True
             )
 
-            # Lọc danh sách nhân viên pháp chế
             legal_candidates = [
                 u for u in all_users
                 if u.get("department") == "Phòng Pháp chế" or "Pháp chế" in u.get("role", "")
@@ -763,13 +1102,13 @@ def director_view(readonly: bool = False, active_tab: str = None):
                         st.error(msg)
 
     # ==========================================================================
-    # TAB 4: PHÊ DUYỆT & BAN HÀNH (BOTTOM FOOTER ACTION SECTION)
+    # TAB 4: PHÊ DUYỆT & BAN HÀNH (GEMINI 2.5 FLASH MULTIMODAL & BOTTOM FOOTER)
     # ==========================================================================
     with tab_approve:
         st.subheader("✍️ Phê Duyệt & Ban Hành Hợp Đồng")
         st.markdown(
-            "Giám đốc Pháp chế đối chiếu nội dung văn bản hợp đồng (PDF) và toàn bộ lịch sử ý kiến thẩm định "
-            "của chuyên viên pháp chế để ra quyết định **'Ký duyệt phát hành'** hoặc **'Yêu cầu làm lại'** tại khu vực Chân trang."
+            "Giám đốc Pháp chế đối chiếu nội dung văn bản hợp đồng (PDF), phân tích rủi ro toàn văn bằng AI Gemini 2.5 Flash, "
+            "và xem xét kết luận của chuyên viên để ra quyết định **'Ký duyệt phát hành'** hoặc **'Yêu cầu làm lại'** tại khu vực Chân trang."
         )
 
         pending_approval_list = [c for c in all_contracts if c.get("status") == "Chờ Giám đốc duyệt"]
@@ -793,9 +1132,10 @@ def director_view(readonly: bool = False, active_tab: str = None):
 
             # MÀN HÌNH CHIA 2 CỘT HIỂN THỊ NỘI DUNG VÀ Ý KIẾN
             col_pdf_left, col_review_right = st.columns([1.05, 0.95])
+            chosen_appr_att = None
 
             # ------------------------------------------------------------------
-            # CỘT TRÁI: HIỂN THỊ TRÌNH XEM PDF ĐỐI CHIẾU
+            # CỘT TRÁI: TRÌNH XEM VĂN BẢN PDF ĐỐI CHIẾU
             # ------------------------------------------------------------------
             with col_pdf_left:
                 st.markdown("#### 📄 Trình Xem Văn Bản Hợp Đồng (Đối Chiếu PDF)")
@@ -897,9 +1237,8 @@ def director_view(readonly: bool = False, active_tab: str = None):
                             if "base64," in raw_b64_clean:
                                 raw_b64_clean = raw_b64_clean.split("base64,", 1)[1]
                             raw_b64_clean = "".join(raw_b64_clean.split())
-                            missing_pad = len(raw_b64_clean) % 4
-                            if missing_pad:
-                                raw_b64_clean += "=" * (4 - missing_pad)
+                            if len(raw_b64_clean) % 4:
+                                raw_b64_clean += "=" * (4 - len(raw_b64_clean) % 4)
                             pdf_data_url = f"data:application/pdf;base64,{raw_b64_clean}"
                             att_fname = chosen_appr_att.get("file_name", "hop_dong.pdf")
 
@@ -949,7 +1288,7 @@ def director_view(readonly: bool = False, active_tab: str = None):
                         )
 
             # ------------------------------------------------------------------
-            # CỘT PHẢI: TOÀN BỘ LỊCH SỬ Ý KIẾN THẨM ĐỊNH CỦA PHÁP CHẾ
+            # CỘT PHẢI: LỊCH SỬ Ý KIẾN THẨM ĐỊNH CỦA PHÁP CHẾ
             # ------------------------------------------------------------------
             with col_review_right:
                 st.markdown("#### ⚖️ Lịch Sử Thẩm Định Của Phòng Pháp Chế")
@@ -1013,6 +1352,11 @@ def director_view(readonly: bool = False, active_tab: str = None):
                     else:
                         st.caption("Chưa có bảng checklist chi tiết.")
 
+            # TÍCH HỢP GEMINI 2.5 FLASH RÀ SOÁT RỦI RO TOÀN VĂN & DOCUMENT Q&A
+            if chosen_appr_att:
+                st.markdown("---")
+                render_gemini_ai_contract_panel(appr_contract, chosen_appr_att, "approve_panel")
+
             # ------------------------------------------------------------------
             # BỐ CỤC ACTION BAR & HƯỚNG DẪN Ở CHÂN TRANG (BOTTOM FOOTER SECTION)
             # ------------------------------------------------------------------
@@ -1023,8 +1367,9 @@ def director_view(readonly: bool = False, active_tab: str = None):
                         <span>🎯 KHU VỰC QUYẾT ĐỊNH PHÊ DUYỆT CỦA GIÁM ĐỐC (CHÂN TRANG)</span>
                     </div>
                     <div class="dir-footer-desc">
-                        Sau khi đã kiểm tra toàn bộ văn bản đối chiếu (PDF) bên trái và kết quả thẩm định checklist bên phải, 
-                        Giám đốc nhập ý kiến chỉ đạo cuối cùng và lựa chọn: <b>'Ký duyệt phát hành'</b> (hồ sơ Hoàn tất) hoặc <b>'Yêu cầu làm lại'</b> (trả về cho chuyên viên điều chỉnh).
+                        Sau khi đã kiểm tra toàn bộ văn bản đối chiếu (PDF) bên trái, kết quả thẩm định của Pháp chế bên phải và 
+                        báo cáo rủi ro AI Gemini 2.5 Flash, Giám đốc nhập ý kiến chỉ đạo cuối cùng và lựa chọn: 
+                        <b>'Ký duyệt phát hành'</b> (hồ sơ Hoàn tất) hoặc <b>'Yêu cầu làm lại'</b> (trả về cho chuyên viên điều chỉnh).
                     </div>
                 </div>
                 """,
