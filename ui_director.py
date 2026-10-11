@@ -93,7 +93,7 @@ def call_gemini_2_5_flash_pdf(pdf_bytes: bytes, prompt_text: str, api_key: str) 
             if hasattr(response, "text") and response.text:
                 return response.text
         except Exception:
-            # Nếu SDK gặp vấn đề về phiên bản, fallback sang REST API bên dưới
+            # Fallback sang REST API
             pass
 
     # Cách 2: Gọi trực tiếp Google Generative Language REST API (Chuẩn Gemini 2.5 Flash)
@@ -148,8 +148,8 @@ def call_gemini_2_5_flash_pdf(pdf_bytes: bytes, prompt_text: str, api_key: str) 
     except Exception as e:
         raise RuntimeError(f"Lỗi khi gửi yêu cầu tới Gemini: {str(e)}")
 
-def render_gemini_api_key_box():
-    """Hộp cấu hình API Key thân thiện khi hệ thống chưa có key"""
+def render_gemini_api_key_box(panel_key: str = "default"):
+    """Hộp cấu hình API Key thân thiện khi hệ thống chưa có key (ngăn trùng lặp element key)"""
     current_key = get_effective_gemini_api_key()
     if not current_key:
         st.markdown(
@@ -175,11 +175,11 @@ def render_gemini_api_key_box():
                 "Dán mã Gemini API Key của bạn vào đây:",
                 type="password",
                 placeholder="AIzaSy...",
-                key="input_director_gemini_key",
+                key=f"input_director_gemini_key_{panel_key}",
                 label_visibility="collapsed"
             )
         with col_k2:
-            if st.button("🔑 Lưu API Key", key="btn_save_dir_api_key", use_container_width=True):
+            if st.button("🔑 Lưu API Key", key=f"btn_save_dir_api_key_{panel_key}", use_container_width=True):
                 if entered_key.strip():
                     st.session_state["gemini_api_key_custom"] = entered_key.strip()
                     st.success("Đã ghi nhận API Key cho phiên làm việc hiện tại!")
@@ -216,7 +216,8 @@ def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, pan
         unsafe_allow_html=True
     )
 
-    render_gemini_api_key_box()
+    c_id = contract.get("id", "doc")
+    render_gemini_api_key_box(panel_key=f"{panel_prefix}_{c_id}")
     active_key = get_effective_gemini_api_key()
 
     pdf_b64 = chosen_attachment.get("file_base64", "").strip() if chosen_attachment else ""
@@ -241,7 +242,6 @@ def render_gemini_ai_contract_panel(contract: dict, chosen_attachment: dict, pan
         st.error("Không thể giải mã dữ liệu PDF nhị phân từ tài liệu đính kèm.")
         return
 
-    c_id = contract.get("id")
     file_name = chosen_attachment.get("file_name", "document.pdf")
     review_cache_key = f"gemini_review_result_{c_id}_{file_name}"
 
