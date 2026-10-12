@@ -145,7 +145,6 @@ def b64url_encode(data: bytes) -> str:
 
 def sign_jwt_rs256_openssl(signing_input: str, private_key_pem: str) -> Optional[str]:
     """Ký số chuỗi header.payload bằng RSA SHA-256 (RS256) thông qua openssl dgst."""
-    # Đảm bảo key có đầy đủ header/footer PEM
     clean_key = private_key_pem.strip()
     if "\\n" in clean_key and "\n" not in clean_key:
         clean_key = clean_key.replace("\\n", "\n")
@@ -155,7 +154,6 @@ def sign_jwt_rs256_openssl(signing_input: str, private_key_pem: str) -> Optional
         kf_path = kf.name
 
     try:
-        # Chạy openssl dgst -sha256 -sign
         p = subprocess.run(
             ["openssl", "dgst", "-sha256", "-sign", kf_path],
             input=signing_input.encode("utf-8"),
@@ -196,13 +194,11 @@ def get_drive_access_token(sa_dict: Optional[Dict[str, Any]] = None, force_refre
     if not client_email or not private_key:
         return None, "Dữ liệu Service Account không hợp lệ (thiếu client_email hoặc private_key)."
 
-    # Kiểm tra cache
     now = int(time.time())
     if not force_refresh and _TOKEN_CACHE.get("access_token") and _TOKEN_CACHE.get("client_email") == client_email:
         if _TOKEN_CACHE.get("expires_at", 0) > now + 60:
             return _TOKEN_CACHE["access_token"], "OK (Cached Token)"
 
-    # Tạo JWT Assertion
     header = {"alg": "RS256", "typ": "JWT"}
     scope = "https://www.googleapis.com/auth/drive"
     exp = now + 3600
@@ -224,7 +220,6 @@ def get_drive_access_token(sa_dict: Optional[Dict[str, Any]] = None, force_refre
 
     jwt_token = f"{signing_input}.{signature_b64}"
 
-    # Đổi JWT lấy Access Token
     payload = {
         "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
         "assertion": jwt_token
@@ -348,7 +343,6 @@ def get_drive_storage_quota() -> Dict[str, Any]:
         limit_str = format_file_size(limit)
         free_str = format_file_size(free)
     else:
-        # Tài khoản Doanh nghiệp / Service Account có thể không giới hạn (limit = 0)
         free = 0
         pct = 0.0
         limit_str = "Không giới hạn (Enterprise)"
@@ -433,7 +427,6 @@ def get_or_create_root_folder() -> Tuple[Optional[str], str]:
     saved_root_id = cfg.get("root_folder_id", "").strip()
     root_name = cfg.get("root_folder_name", "HOP_DONG_CNS").strip() or "HOP_DONG_CNS"
 
-    # Kiểm tra nếu saved_root_id hợp lệ
     if saved_root_id:
         ok, data, _ = drive_api_request(
             f"https://www.googleapis.com/drive/v3/files/{saved_root_id}",
@@ -442,10 +435,8 @@ def get_or_create_root_folder() -> Tuple[Optional[str], str]:
         if ok and data and not data.get("trashed"):
             return saved_root_id, "OK"
 
-    # Tìm hoặc tạo thư mục gốc theo tên
     root_id, err = get_or_create_subfolder(root_name, parent_id=None)
     if root_id:
-        # Cập nhật lại config nếu trước đó chưa lưu ID
         full_cfg = get_config()
         if "google_drive" not in full_cfg:
             full_cfg["google_drive"] = {}
@@ -466,21 +457,7 @@ def get_or_create_contract_folder_hierarchy(
         [ROOT_FOLDER] / [NĂM] / [MÃ_HỒ_SƠ]_[TÊN_RÚT_GỌN]
     Ví dụ:
         HOP_DONG_CNS / 2026 / HD-2026-001_Hop_dong_dich_vu_cntt
-    
-    Trả về dict chi tiết:
-    {
-        "success": bool,
-        "root_folder_id": str,
-        "year_folder_id": str,
-        "contract_folder_id": str,
-        "year": str,
-        "contract_folder_name": str,
-        "folder_path": str,
-        "web_view_link": str,
-        "error": str
-    }
     """
-    # 1. Thư mục gốc [ROOT_FOLDER]
     root_id, root_err = get_or_create_root_folder()
     if not root_id:
         return {
@@ -492,11 +469,9 @@ def get_or_create_contract_folder_hierarchy(
     cfg = get_saved_drive_config()
     root_name = cfg.get("root_folder_name", "HOP_DONG_CNS")
 
-    # 2. Thư mục cấp 1: [NĂM] (VD: 2026)
     year_str = str(datetime.now().year)
     if created_at_str:
         try:
-            # Nhận dạng năm từ chuỗi ISO hoặc định dạng 'YYYY-MM-DD'
             match = re.search(r"\b(20\d{2})\b", created_at_str)
             if match:
                 year_str = match.group(1)
@@ -511,7 +486,6 @@ def get_or_create_contract_folder_hierarchy(
             "folder_path": f"{root_name} / {year_str}"
         }
 
-    # 3. Thư mục cấp 2: [MÃ_HỒ_SƠ]_[TÊN_RÚT_GỌN]
     contract_folder_name = build_contract_folder_name(contract_code, contract_title)
     contract_folder_id, folder_err = get_or_create_subfolder(contract_folder_name, parent_id=year_id)
     if not contract_folder_id:
@@ -577,19 +551,16 @@ def upload_file_bytes_to_drive(
     }
 
     body = bytearray()
-    # Phần 1: Metadata JSON
     body.extend(f"--{boundary}\r\n".encode("utf-8"))
     body.extend(b"Content-Type: application/json; charset=UTF-8\r\n\r\n")
     body.extend(json.dumps(metadata).encode("utf-8"))
     body.extend(b"\r\n")
 
-    # Phần 2: Nội dung file bytes
     body.extend(f"--{boundary}\r\n".encode("utf-8"))
     body.extend(f"Content-Type: {mime_type}\r\n\r\n".encode("utf-8"))
     body.extend(file_bytes)
     body.extend(b"\r\n")
 
-    # Kết thúc multipart
     body.extend(f"--{boundary}--\r\n".encode("utf-8"))
 
     url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink,webContentLink,createdTime"
@@ -643,7 +614,6 @@ def upload_contract_attachment_to_drive(
     target_folder_id = hierarchy["contract_folder_id"]
     folder_path = hierarchy["folder_path"]
 
-    # Đặt tên tệp chuẩn
     safe_name = re.sub(r"[^\w.-]", "_", remove_vietnamese_accents(file_name)).strip("_")
     if not safe_name:
         safe_name = "tai_lieu_dinh_kem.pdf"
@@ -678,17 +648,14 @@ def test_drive_connection(service_account_input: Optional[Any] = None) -> Tuple[
         if not sa_dict:
             return False, "Chưa cung cấp Service Account JSON hợp lệ để kiểm tra kết nối.", {}
 
-    # Bước 1: Lấy Token
     token, token_err = get_drive_access_token(sa_dict, force_refresh=True)
     if not token:
         return False, f"Xác thực thất bại: {token_err}", {}
 
-    # Bước 2: Kiểm tra Storage Quota
     quota_info = get_drive_storage_quota()
     if not quota_info.get("success"):
         return False, f"Kết nối OAuth thành công nhưng không truy vấn được About/Quota: {quota_info.get('error')}", {}
 
-    # Bước 3: Kiểm tra Thư mục Gốc
     root_id, root_err = get_or_create_root_folder()
     if not root_id:
         return False, f"Xác thực thành công nhưng không thể tạo/truy cập Thư mục Gốc trên Drive: {root_err}", quota_info
