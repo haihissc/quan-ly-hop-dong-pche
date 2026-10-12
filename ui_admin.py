@@ -2,11 +2,14 @@
 HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - GIAO DIỆN QUẢN TRỊ ADMIN
 File: ui_admin.py
 Chứa:
-- admin_view(): Quản lý phòng ban, Quản lý người dùng, Cấu hình hệ thống.
+- admin_view(): Quản lý phòng ban, Quản lý người dùng, Cấu hình hệ thống & Gemini AI.
 - workflow_config_view(): Cấu hình loại hợp đồng và checklist hồ sơ.
 """
 
 import base64
+import json
+import urllib.request
+import urllib.error
 import pandas as pd
 import streamlit as st
 
@@ -17,6 +20,55 @@ from db_utils import (
     get_workflows, save_workflows,
     get_contracts, save_contracts
 )
+
+def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
+    """Kiểm tra tính hợp lệ của Google Gemini API Key thông qua REST API (hỗ trợ gemini-3.8-flash, fallback cascade)."""
+    if not api_key or not api_key.strip():
+        return False, "API Key đang để trống. Vui lòng nhập API Key để kiểm tra."
+    
+    clean_key = api_key.strip()
+    candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+    last_err = ""
+
+    for model_name in candidate_models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": "Xin chào, phản hồi ngắn gọn 1 từ: 'OK'"}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "maxOutputTokens": 10,
+                "temperature": 0.1
+            }
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("candidates"):
+                    return True, f"Kết nối Gemini API thành công với mô hình '{model_name}'!"
+        except urllib.error.HTTPError as e:
+            try:
+                err_data = json.loads(e.read().decode("utf-8", errors="ignore"))
+                last_err = err_data.get("error", {}).get("message", str(e))
+            except Exception:
+                last_err = str(e)
+            if "not found" in last_err.lower() or "404" in str(e):
+                continue
+            return False, f"Lỗi xác thực Gemini API: {last_err}"
+        except Exception as e:
+            last_err = str(e)
+            return False, f"Lỗi mạng hoặc kết nối tới Google API: {last_err}"
+
+    return False, f"Không thể kết nối với các mô hình Gemini. Lỗi cuối: {last_err}"
 
 def admin_view():
     st.title("⚙️ Bảng Điều Khiển Quản Trị Hệ Thống (Admin Panel)")
@@ -293,12 +345,86 @@ def admin_view():
             cfg_smtp_host = st.text_input("Máy chủ SMTP", value=smtp_cfg.get("server", "smtp.gmail.com"))
             cfg_smtp_port = st.number_input("Cổng SMTP", value=int(smtp_cfg.get("port", 587)))
 
+        # ======================================================================
+        # CẤU HÌNH TRÍ TUỆ NHÂN TẠO (GOOGLE GEMINI AI) DÙNG CHUNG TOÀN HỆ THỐNG
+        # ======================================================================
+        st.markdown("---")
+        st.markdown("#### 🔑 Cấu Hình Trí Tuệ Nhân Tạo (Google Gemini AI)")
+        st.markdown(
+            """
+            <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2563EB; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.88rem; color: #334155; line-height: 1.5;">
+                <b>💡 Lưu ý nghiệp vụ:</b> Quản trị viên cấu hình <b>Google Gemini API Key</b> một lần tại đây. Khóa này sẽ được lưu cố định vào hệ thống, 
+                giúp <b>Giám đốc Pháp chế</b> (phê duyệt, rà soát rủi ro toàn văn PDF, Document Q&A) và <b>Chuyên viên Pháp chế</b> (thẩm định điều khoản hợp đồng) 
+                tự động có AI sẵn sàng sử dụng mà không cần phải tự cấu hình hay nhập lại nhiều lần.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        current_saved_gemini_key = cfg.get("gemini_api_key", "").strip()
+
+        # Hiển thị trạng thái cấu hình hiện tại
+        if current_saved_gemini_key:
+            masked_key = current_saved_gemini_key[:4] + "•" * max(len(current_saved_gemini_key) - 8, 4) + current_saved_gemini_key[-4:] if len(current_saved_gemini_key) > 8 else "••••••••"
+            st.markdown(
+                f"""
+                <div style="background-color: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-weight: 700; color: #065F46; font-size: 0.86rem;">
+                        🟢 Trạng thái AI: ĐÃ CẤU HÌNH HỆ THỐNG (Khóa hiện tại: <code>{masked_key}</code>)
+                    </span>
+                    <span style="font-size: 0.80rem; background-color: #D1FAE5; color: #047857; font-weight: 600; padding: 3px 8px; border-radius: 6px;">
+                        Mô hình: gemini-3.8-flash (Tự động sẵn sàng)
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                """
+                <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
+                    <span style="font-weight: 700; color: #92400E; font-size: 0.86rem;">
+                        🟡 Trạng thái AI: CHƯA CẤU HÌNH API KEY HỆ THỐNG
+                    </span>
+                    <span style="display: block; font-size: 0.82rem; color: #B45309; margin-top: 4px;">
+                        Các tính năng AI (rà soát rủi ro hợp đồng, hỏi đáp tệp PDF) sẽ tạm thời yêu cầu Giám đốc/Chuyên viên tự nhập key tạm. Hãy nhập API Key bên dưới để kích hoạt cho toàn thể nhân sự.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        col_ai_key, col_ai_test = st.columns([3, 1.2])
+        with col_ai_key:
+            input_gemini_key = st.text_input(
+                "Google Gemini API Key *:",
+                value=current_saved_gemini_key,
+                type="password",
+                placeholder="Nhập hoặc dán Gemini API Key (bắt đầu bằng AIzaSy...)",
+                help="Lấy API Key miễn phí hoặc trả phí tại Google AI Studio: https://aistudio.google.com/app/apikey",
+                key="admin_gemini_api_key_input"
+            )
+        with col_ai_test:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+            btn_test_gemini = st.button("🧪 Kiểm Tra Kết Nối", use_container_width=True, key="btn_test_gemini_admin")
+
+        if btn_test_gemini:
+            with st.spinner("Đang kết nối thử nghiệm tới máy chủ Google Gemini API..."):
+                is_valid, test_msg = test_gemini_api_connection(input_gemini_key)
+                if is_valid:
+                    st.success(f"✅ {test_msg}")
+                else:
+                    st.error(f"❌ {test_msg}")
+
+        st.markdown("---")
+
         if st.button("💾 Lưu Toàn Bộ Cấu Hình Hệ Thống", use_container_width=True, type="primary"):
             cfg["company_name"], cfg["short_name"], cfg["company_address"], cfg["logo_base64"] = cfg_comp_name.strip(), cfg_short.strip(), cfg_addr.strip(), active_logo_b64
             cfg["smtp_settings"] = {"server": cfg_smtp_host.strip(), "port": int(cfg_smtp_port), "sender_email": cfg_sender.strip(), "app_password": cfg_app_pwd.strip(), "use_tls": True}
+            cfg["gemini_api_key"] = input_gemini_key.strip()
             save_config(cfg)
             st.session_state["config_save_success"] = True
-            st.success("Cập nhật thông tin doanh nghiệp thành công!")
+            st.success("🎉 Đã lưu cấu hình doanh nghiệp và Google Gemini API Key thành công! Toàn bộ Giám đốc và Chuyên viên pháp chế có thể sử dụng AI ngay lập tức.")
             st.rerun()
 
 
@@ -368,4 +494,3 @@ def workflow_config_view():
                     st.rerun()
 
 # ==============================================================================
-
