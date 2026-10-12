@@ -515,7 +515,6 @@ def admin_view():
                 else:
                     st.error(f"❌ Đồng bộ thất bại: {sync_res.get('error', 'Lỗi không xác định')}")
 
-        # Lấy thông tin dung lượng
         quota_data = get_drive_storage_quota()
         stats_data = get_drive_contracts_storage_stats()
 
@@ -531,10 +530,8 @@ def admin_view():
             with col_m4:
                 st.metric("📊 Tỷ Lệ Sử Dụng", f"{pct:.1f}%")
 
-            # Thanh tiến trình
             st.progress(min(pct / 100.0, 1.0))
 
-            # Thông tin tài khoản và thư mục hồ sơ
             st.markdown(
                 f"""
                 <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #475569;">
@@ -548,7 +545,6 @@ def admin_view():
         else:
             st.info("ℹ️ Google Drive chưa được kết nối hoặc chưa cấu hình Service Account. Hãy thiết lập cấu hình bên dưới để kích hoạt Dashboard dung lượng.")
 
-        # Thống kê hồ sơ hợp đồng
         st.markdown("##### 📁 Thống Kê Tài Liệu Hợp Đồng Hệ Thống")
         col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
@@ -577,7 +573,6 @@ def admin_view():
         curr_root_id = drive_cfg.get("root_folder_id", "")
         curr_enabled = drive_cfg.get("enabled", False)
 
-        # Hiển thị trạng thái kết nối
         sa_parsed = parse_service_account_data(curr_sa_json)
         if sa_parsed:
             st.success(f"🟢 **Trạng thái Drive:** Đã có Service Account Key cho `client_email`: `{sa_parsed.get('client_email')}`")
@@ -593,7 +588,6 @@ def admin_view():
                 help="Tải tệp JSON từ Google Cloud Console -> IAM & Admin -> Service Accounts -> Keys."
             )
             
-            # Nếu người dùng upload file, đọc nội dung
             loaded_json_content = curr_sa_json
             if uploaded_sa_file is not None:
                 try:
