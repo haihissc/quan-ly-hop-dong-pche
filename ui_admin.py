@@ -1,9 +1,15 @@
 """
 HỆ THỐNG QUẢN TRỊ HỢP ĐỒNG - GIAO DIỆN QUẢN TRỊ ADMIN
 File: ui_admin.py
+
 Chứa:
-- admin_view(): Quản lý phòng ban, Quản lý người dùng, Cấu hình hệ thống & Gemini AI.
-- workflow_config_view(): Cấu hình loại hợp đồng và checklist hồ sơ.
+- admin_view(): 
+    1. Quản lý Phòng ban (Thêm, Sửa, Xóa).
+    2. Quản lý Người dùng & Phân quyền thông minh (Tạo mới, Chỉnh sửa/Đổi tên đăng nhập đồng bộ hồ sơ, Xóa).
+    3. Cấu hình Doanh nghiệp & Trung tâm Gemini AI (Nhận diện công ty, Logo, SMTP, Gemini API Key kiểm tra kết nối REST).
+    4. Quản trị Google Drive & Dung lượng Lưu trữ (Cấu trúc phân cấp chuẩn, Service Account, Quota Dashboard, Đồng bộ tệp).
+- workflow_config_view():
+    Cấu hình Loại hợp đồng và Checklist hồ sơ (Dành cho Pháp chế).
 """
 
 import base64
@@ -21,6 +27,19 @@ from db_utils import (
     get_contracts, save_contracts
 )
 
+from drive_utils import (
+    test_drive_connection,
+    get_drive_storage_quota,
+    get_drive_contracts_storage_stats,
+    sync_all_pending_contract_files_to_drive,
+    get_saved_drive_config,
+    parse_service_account_data,
+    format_file_size
+)
+
+# ==============================================================================
+# HÀM KIỂM TRA KẾT NỐI GOOGLE GEMINI AI
+# ==============================================================================
 def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
     """Kiểm tra tính hợp lệ của Google Gemini API Key thông qua REST API (hỗ trợ gemini-3.8-flash, fallback cascade)."""
     if not api_key or not api_key.strip():
@@ -70,14 +89,29 @@ def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
 
     return False, f"Không thể kết nối với các mô hình Gemini. Lỗi cuối: {last_err}"
 
+
+# ==============================================================================
+# HÀM CHÍNH: ADMIN_VIEW()
+# ==============================================================================
 def admin_view():
     st.title("⚙️ Bảng Điều Khiển Quản Trị Hệ Thống (Admin Panel)")
-    tab_depts, tab_users, tab_sys_config = st.tabs(["🏢 Quản lý Phòng ban", "👥 Quản lý Người dùng", "🌐 Cấu hình Hệ thống"])
+    
+    tab_depts, tab_users, tab_sys_config, tab_drive = st.tabs([
+        "🏢 Quản lý Phòng ban",
+        "👥 Quản lý Người dùng",
+        "🌐 Cấu hình Doanh nghiệp & AI",
+        "☁️ Quản Trị Google Drive & Dung Lượng"
+    ])
 
+    # --------------------------------------------------------------------------
+    # TAB 1: QUẢN LÝ PHÒNG BAN
+    # --------------------------------------------------------------------------
     with tab_depts:
         st.subheader("🏢 Quản Lý Danh Sách Phòng Ban")
         departments = get_departments()
-        if departments: st.dataframe(pd.DataFrame(departments), use_container_width=True)
+        if departments:
+            st.dataframe(pd.DataFrame(departments), use_container_width=True)
+            
         col_add, col_edit, col_del = st.columns(3)
         with col_add:
             with st.form("form_add_dept", clear_on_submit=True):
@@ -87,7 +121,12 @@ def admin_view():
                 if st.form_submit_button("Thêm phòng ban", use_container_width=True):
                     if new_d_name.strip():
                         dept_code = "DEPT_" + str(len(departments) + 1).zfill(2)
-                        departments.append({"id": dept_code, "name": new_d_name.strip(), "manager": new_d_mgr.strip() if new_d_mgr else "Chưa phân công", "email": new_d_mail.strip()})
+                        departments.append({
+                            "id": dept_code,
+                            "name": new_d_name.strip(),
+                            "manager": new_d_mgr.strip() if new_d_mgr else "Chưa phân công",
+                            "email": new_d_mail.strip()
+                        })
                         save_departments(departments)
                         st.success("Thêm thành công!")
                         st.rerun()
@@ -118,13 +157,16 @@ def admin_view():
                         st.success("Đã xóa phòng ban!")
                         st.rerun()
 
+    # --------------------------------------------------------------------------
+    # TAB 2: QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN THÔNG MINH
+    # --------------------------------------------------------------------------
     with tab_users:
         st.subheader("👥 Quản Lý Người Dùng & Phân Quyền Thông Minh")
         all_users = get_users()
         departments = get_departments()
         dept_names = [d["name"] for d in departments] if departments else ["Phòng Pháp chế", "Ban Giám đốc", "Phòng Kinh doanh & Tiếp thị"]
 
-        # 1. HIỂN THỊ DANH SÁCH TÀI KHOẢN DƯỚI DẠNG BẢNG ĐỦ: Username, Họ tên, Phòng ban, Role, Email, Zalo
+        # 1. BẢNG HIỂN THỊ DANH SÁCH TÀI KHOẢN
         st.markdown("#### 📋 Danh Sách Tài Khoản Nhân Sự Hiện Có")
         user_table_data = []
         for u in all_users:
@@ -184,7 +226,6 @@ def admin_view():
                     )
 
             if st.button("Lưu & Tạo Tài Khoản Nhân Sự 🚀", type="primary", use_container_width=True, key="btn_save_new_user"):
-                # Bắt lỗi cẩn thận đầy đủ các trường
                 if not u_name.strip():
                     st.error("❌ Vui lòng nhập Tên đăng nhập (Username)!")
                 elif any(u.get("username") == u_name.strip() for u in all_users):
@@ -272,11 +313,9 @@ def admin_view():
                                 "status": target_user.get("status", "active")
                             }
 
-                            # Loại bỏ bản ghi cũ và thêm bản ghi mới để không bị trùng lặp
                             updated_user_list = [u for u in all_users if u.get("username", "").strip() != old_uname]
                             updated_user_list.append(updated_user)
 
-                            # Đồng bộ các hợp đồng liên quan nếu đổi Tên đăng nhập
                             if new_uname != old_uname:
                                 all_contracts = get_contracts()
                                 contracts_synced = False
@@ -290,7 +329,6 @@ def admin_view():
                                 if contracts_synced:
                                     save_contracts(all_contracts)
 
-                            # Cập nhật session_state nếu chính tài khoản này đang đăng nhập
                             if st.session_state.get("user", {}).get("username") == old_uname:
                                 st.session_state["user"] = updated_user
                                 st.session_state["role"] = ed_role
@@ -321,6 +359,9 @@ def admin_view():
                 else:
                     st.info("Chỉ còn tài khoản Quản trị viên 'admin', không thể xóa.")
 
+    # --------------------------------------------------------------------------
+    # TAB 3: CẤU HÌNH DOANH NGHIỆP, SMTP & GOOGLE GEMINI AI
+    # --------------------------------------------------------------------------
     with tab_sys_config:
         st.subheader("🌐 Cấu Hình Nhận Diện Doanh Nghiệp & Email Gửi Đi")
         if st.session_state.get("config_save_success"):
@@ -345,9 +386,7 @@ def admin_view():
             cfg_smtp_host = st.text_input("Máy chủ SMTP", value=smtp_cfg.get("server", "smtp.gmail.com"))
             cfg_smtp_port = st.number_input("Cổng SMTP", value=int(smtp_cfg.get("port", 587)))
 
-        # ======================================================================
         # CẤU HÌNH TRÍ TUỆ NHÂN TẠO (GOOGLE GEMINI AI) DÙNG CHUNG TOÀN HỆ THỐNG
-        # ======================================================================
         st.markdown("---")
         st.markdown("#### 🔑 Cấu Hình Trí Tuệ Nhân Tạo (Google Gemini AI)")
         st.markdown(
@@ -363,7 +402,6 @@ def admin_view():
 
         current_saved_gemini_key = cfg.get("gemini_api_key", "").strip()
 
-        # Hiển thị trạng thái cấu hình hiện tại
         if current_saved_gemini_key:
             masked_key = current_saved_gemini_key[:4] + "•" * max(len(current_saved_gemini_key) - 8, 4) + current_saved_gemini_key[-4:] if len(current_saved_gemini_key) > 8 else "••••••••"
             st.markdown(
@@ -418,18 +456,209 @@ def admin_view():
 
         st.markdown("---")
 
-        if st.button("💾 Lưu Toàn Bộ Cấu Hình Hệ Thống", use_container_width=True, type="primary"):
+        if st.button("💾 Lưu Cấu Hình Doanh Nghiệp & Gemini AI", use_container_width=True, type="primary"):
             cfg["company_name"], cfg["short_name"], cfg["company_address"], cfg["logo_base64"] = cfg_comp_name.strip(), cfg_short.strip(), cfg_addr.strip(), active_logo_b64
-            cfg["smtp_settings"] = {"server": cfg_smtp_host.strip(), "port": int(cfg_smtp_port), "sender_email": cfg_sender.strip(), "app_password": cfg_app_pwd.strip(), "use_tls": True}
+            cfg["smtp_settings"] = {
+                "server": cfg_smtp_host.strip(),
+                "port": int(cfg_smtp_port),
+                "sender_email": cfg_sender.strip(),
+                "app_password": cfg_app_pwd.strip(),
+                "use_tls": True
+            }
             cfg["gemini_api_key"] = input_gemini_key.strip()
             save_config(cfg)
             st.session_state["config_save_success"] = True
-            st.success("🎉 Đã lưu cấu hình doanh nghiệp và Google Gemini API Key thành công! Toàn bộ Giám đốc và Chuyên viên pháp chế có thể sử dụng AI ngay lập tức.")
+            st.success("🎉 Đã lưu cấu hình doanh nghiệp và Google Gemini API Key thành công!")
+            st.rerun()
+
+    # --------------------------------------------------------------------------
+    # TAB 4: QUẢN TRỊ GOOGLE DRIVE & DUNG LƯỢNG LƯU TRỮ
+    # --------------------------------------------------------------------------
+    with tab_drive:
+        st.subheader("☁️ Trung Tâm Quản Trị Google Drive & Dung Lượng Lưu Trữ")
+        
+        # 1. Khối Banner thông tin cấu trúc thư mục chuẩn
+        st.markdown(
+            """
+            <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-left: 4px solid #16A34A; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.88rem; color: #166534; line-height: 1.6;">
+                <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 6px;">
+                    📁 CẤU TRÚC LƯU TRỮ PHÂN CẤP CHUẨN DOANH NGHIỆP TRÊN GOOGLE DRIVE
+                </div>
+                Hệ thống tự động khởi tạo và ràng buộc cây thư mục 3 cấp độc lập, khoa học:<br>
+                <code>[THƯ_MỤC_GỐC] / [NĂM] / [MÃ_HỒ_SƠ]_[TÊN_RÚT_GỌN] / [TÊN_TỆP]</code><br>
+                <b>Ví dụ:</b> <code>HOP_DONG_CNS / 2026 / HD-2026-001_Hop_dong_dich_vu_cntt / 01_du_thao_hop_dong.pdf</code><br>
+                <i>Cơ chế này đảm bảo hồ sơ được lưu trữ tập trung, không phân mảnh và hỗ trợ phân quyền chuẩn mực.</i>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        cfg = get_config()
+        drive_cfg = cfg.get("google_drive", {})
+        if not isinstance(drive_cfg, dict):
+            drive_cfg = {}
+
+        # 2. Bảng điều khiển Quản trị Dung lượng (Storage Quota Dashboard)
+        st.markdown("#### 📊 Bảng Điều Khiển Dung Lượng Lưu Trữ (Storage Quota Dashboard)")
+        
+        col_ref_quota, col_sync_all = st.columns([1, 1.2])
+        with col_ref_quota:
+            refresh_quota = st.button("🔄 Cập Nhật Dung Lượng Thực Tế", use_container_width=True, key="btn_refresh_drive_quota")
+        with col_sync_all:
+            sync_files_btn = st.button("⚡ Đồng Bộ Hồ Sơ Chưa Lưu Lên Drive", use_container_width=True, key="btn_sync_files_to_drive")
+
+        if sync_files_btn:
+            with st.spinner("Đang đồng bộ các tệp hợp đồng lên cấu trúc phân cấp Google Drive..."):
+                sync_res = sync_all_pending_contract_files_to_drive()
+                if sync_res.get("success"):
+                    st.success(f"🎉 Đã đồng bộ thành công {sync_res.get('synced_count', 0)} tệp lên Google Drive!")
+                else:
+                    st.error(f"❌ Đồng bộ thất bại: {sync_res.get('error', 'Lỗi không xác định')}")
+
+        # Lấy thông tin dung lượng
+        quota_data = get_drive_storage_quota()
+        stats_data = get_drive_contracts_storage_stats()
+
+        if quota_data.get("connected"):
+            pct = quota_data.get("percent_used", 0.0)
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            with col_m1:
+                st.metric("📦 Đã Sử Dụng", quota_data.get("usage_formatted", "0 B"))
+            with col_m2:
+                st.metric("🎯 Tổng Hạn Mức", quota_data.get("limit_formatted", "Unlimited"))
+            with col_m3:
+                st.metric("🟢 Còn Trống", quota_data.get("free_formatted", "N/A"))
+            with col_m4:
+                st.metric("📊 Tỷ Lệ Sử Dụng", f"{pct:.1f}%")
+
+            # Thanh tiến trình
+            st.progress(min(pct / 100.0, 1.0))
+
+            # Thông tin tài khoản và thư mục hồ sơ
+            st.markdown(
+                f"""
+                <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #475569;">
+                    <b>Tài khoản dịch vụ:</b> <code>{quota_data.get('user_email')}</code> &nbsp;|&nbsp; 
+                    <b>Chủ sở hữu:</b> {quota_data.get('user_name')} &nbsp;|&nbsp; 
+                    <b>Dung lượng trong thùng rác:</b> {quota_data.get('trash_formatted', '0 B')}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.info("ℹ️ Google Drive chưa được kết nối hoặc chưa cấu hình Service Account. Hãy thiết lập cấu hình bên dưới để kích hoạt Dashboard dung lượng.")
+
+        # Thống kê hồ sơ hợp đồng
+        st.markdown("##### 📁 Thống Kê Tài Liệu Hợp Đồng Hệ Thống")
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+            st.metric("Tổng Số Hồ Sơ", f"{stats_data.get('total_contracts', 0)} hồ sơ", f"Đã lưu Drive: {stats_data.get('synced_contracts', 0)}")
+        with col_s2:
+            st.metric("Tổng Số Tệp Đính Kèm", f"{stats_data.get('total_files', 0)} tệp", f"Đã đẩy Drive: {stats_data.get('synced_files', 0)}")
+        with col_s3:
+            st.metric("Tổng Dung Lượng Tệp", stats_data.get("total_size_formatted", "0 B"))
+
+        st.markdown("---")
+
+        # 3. Khối Cấu hình Service Account & Thư mục Gốc
+        st.markdown("#### 🔐 Cấu Hình Kết Nối & Khóa Dịch Vụ Google Drive")
+        st.markdown(
+            """
+            <div style="font-size: 0.86rem; color: #64748B; margin-bottom: 12px;">
+                Quản trị viên có thể tải lên tệp <code>credentials.json</code> của Google Cloud Service Account hoặc dán trực tiếp chuỗi JSON.<br>
+                <i>Hệ thống tự động sử dụng cơ chế chữ ký số RS256 chuẩn bảo mật để kết nối trực tiếp đến Google Drive API v3.</i>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        curr_sa_json = drive_cfg.get("service_account_json", "")
+        curr_root_name = drive_cfg.get("root_folder_name", "HOP_DONG_CNS") or "HOP_DONG_CNS"
+        curr_root_id = drive_cfg.get("root_folder_id", "")
+        curr_enabled = drive_cfg.get("enabled", False)
+
+        # Hiển thị trạng thái kết nối
+        sa_parsed = parse_service_account_data(curr_sa_json)
+        if sa_parsed:
+            st.success(f"🟢 **Trạng thái Drive:** Đã có Service Account Key cho `client_email`: `{sa_parsed.get('client_email')}`")
+        else:
+            st.warning("🟡 **Trạng thái Drive:** Chưa có Service Account Key hợp lệ.")
+
+        col_dr1, col_dr2 = st.columns([1.5, 1])
+        with col_dr1:
+            uploaded_sa_file = st.file_uploader(
+                "Tải lên tệp Service Account Key (JSON):",
+                type=["json"],
+                key="upload_sa_json_file",
+                help="Tải tệp JSON từ Google Cloud Console -> IAM & Admin -> Service Accounts -> Keys."
+            )
+            
+            # Nếu người dùng upload file, đọc nội dung
+            loaded_json_content = curr_sa_json
+            if uploaded_sa_file is not None:
+                try:
+                    loaded_json_content = uploaded_sa_file.read().decode("utf-8")
+                    st.success("Đã nạp nội dung tệp JSON thành công!")
+                except Exception as e:
+                    st.error(f"Lỗi đọc tệp JSON: {e}")
+
+            sa_json_input = st.text_area(
+                "Hoặc dán nội dung Service Account JSON vào đây *:",
+                value=loaded_json_content,
+                height=180,
+                key="input_sa_json_textarea",
+                placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...",\n  "client_email": "...@...iam.gserviceaccount.com"\n}'
+            )
+
+        with col_dr2:
+            root_folder_name_input = st.text_input(
+                "Tên Thư mục Gốc (Root Folder Name) *:",
+                value=curr_root_name,
+                help="Thư mục gốc cha cấp cao nhất trên Google Drive (Mặc định: HOP_DONG_CNS hoặc viết tắt công ty).",
+                key="input_root_folder_name"
+            )
+            root_folder_id_input = st.text_input(
+                "ID Thư mục Gốc (Tùy chọn nếu đã tạo sẵn trên Drive):",
+                value=curr_root_id,
+                help="Nếu để trống, hệ thống sẽ tự động tìm hoặc tạo thư mục có tên trên.",
+                key="input_root_folder_id"
+            )
+            enable_drive_sync = st.checkbox(
+                "Kích hoạt tự động lưu trữ và đồng bộ Google Drive",
+                value=curr_enabled,
+                help="Khi bật, hồ sơ mới tạo hoặc thẩm định sẽ tự động tạo thư mục phân cấp và lưu tệp lên Drive.",
+                key="chk_enable_drive_sync"
+            )
+
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            btn_test_drive = st.button("🧪 Kiểm Tra Kết Nối Google Drive", use_container_width=True, key="btn_test_drive_conn")
+
+        if btn_test_drive:
+            with st.spinner("Đang xác thực Service Account và kiểm tra quyền truy cập Google Drive..."):
+                conn_ok, conn_msg, conn_details = test_drive_connection(sa_json_input)
+                if conn_ok:
+                    st.success(f"✅ {conn_msg}")
+                    st.json(conn_details)
+                else:
+                    st.error(f"❌ {conn_msg}")
+
+        st.markdown("---")
+
+        if st.button("💾 Lưu Cấu Hình Google Drive", use_container_width=True, type="primary", key="btn_save_drive_config"):
+            cfg["google_drive"] = {
+                "enabled": enable_drive_sync,
+                "service_account_json": sa_json_input.strip(),
+                "root_folder_name": root_folder_name_input.strip() or "HOP_DONG_CNS",
+                "root_folder_id": root_folder_id_input.strip(),
+                "client_email": parse_service_account_data(sa_json_input).get("client_email", "") if parse_service_account_data(sa_json_input) else ""
+            }
+            save_config(cfg)
+            st.success("🎉 Đã lưu cấu hình Google Drive thành công!")
             st.rerun()
 
 
 # ==============================================================================
-# 7. BƯỚC 2: HÀM WORKFLOW_CONFIG_VIEW()
+# HÀM QUẢN LÝ QUY TRÌNH HỢP ĐỒNG (WORKFLOW_CONFIG_VIEW)
 # ==============================================================================
 def workflow_config_view():
     st.title("⚖️ Quản Lý Loại Hợp Đồng & Checklist Hồ Sơ (Dành cho Pháp chế)")
@@ -458,7 +687,13 @@ def workflow_config_view():
                     if "Tài liệu khác" in items: items.remove("Tài liệu khác")
                     items.append("Tài liệu khác")
                     final_id = new_wf_id.strip() if new_wf_id.strip() else f"WF_{len(workflows)+1}"
-                    workflows.append({"id": final_id, "name": new_wf_name.strip(), "contract_type": new_wf_name.strip(), "description": new_wf_desc.strip(), "checklist": items})
+                    workflows.append({
+                        "id": final_id,
+                        "name": new_wf_name.strip(),
+                        "contract_type": new_wf_name.strip(),
+                        "description": new_wf_desc.strip(),
+                        "checklist": items
+                    })
                     save_workflows(workflows)
                     st.success("Đã thêm loại hợp đồng thành công! ('Tài liệu khác' đã tự động chèn ở cuối)")
                     st.rerun()
@@ -492,5 +727,3 @@ def workflow_config_view():
                     save_workflows([w for w in workflows if w.get("contract_type", w.get("name")) != del_wf_name])
                     st.success("Đã xóa!")
                     st.rerun()
-
-# ==============================================================================
