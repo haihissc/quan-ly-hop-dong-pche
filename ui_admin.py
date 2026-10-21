@@ -6,7 +6,7 @@ Chứa:
 - admin_view(): 
     1. Quản lý Phòng ban (Thêm, Sửa, Xóa).
     2. Quản lý Người dùng & Phân quyền thông minh (Tạo mới, Chỉnh sửa/Đổi tên đăng nhập đồng bộ hồ sơ, Xóa).
-    3. Cấu hình Doanh nghiệp & Trung tâm Gemini AI (Nhận diện công ty, Logo, SMTP, Gemini API Key kiểm tra kết nối REST).
+    3. Cấu hình Doanh nghiệp & Trung tâm Gemini AI (Nhận diện công ty, Logo, SMTP, Gemini API Key kiểm tra kết nối REST siêu nhẹ, xử lý quá tải thông minh).
     4. Quản trị Google Drive & Dung lượng Lưu trữ (Cấu trúc phân cấp chuẩn, Service Account, Quota Dashboard, Đồng bộ tệp).
 - workflow_config_view():
     Cấu hình Loại hợp đồng và Checklist hồ sơ (Dành cho Pháp chế).
@@ -38,15 +38,27 @@ from drive_utils import (
 )
 
 # ==============================================================================
-# HÀM KIỂM TRA KẾT NỐI GOOGLE GEMINI AI
+# HÀM KIỂM TRA KẾT NỐI GOOGLE GEMINI AI (SIÊU NHẸ & XỬ LÝ QUÁ TẢI THÔNG MINH)
 # ==============================================================================
-def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
-    """Kiểm tra tính hợp lệ của Google Gemini API Key thông qua REST API (hỗ trợ gemini-3.8-flash, fallback cascade)."""
+def test_gemini_api_connection(api_key: str) -> tuple[bool, str, bool]:
+    """
+    Kiểm tra tính hợp lệ của Google Gemini API Key thông qua REST API siêu nhẹ.
+    - Model ping test: gemini-2.5-flash (tránh nghẽn hạn ngạch so với các bản Pro hay model cũ).
+    - Nội dung prompt: 'ping' với maxOutputTokens: 1 để tiêu tốn ít tài nguyên nhất, tránh bị từ chối do quá tải.
+    - Cơ chế bắt lỗi thông minh (Graceful Handling): Nếu gặp lỗi high demand / 429 / 503,
+      hệ thống xác nhận API Key về mặt cú pháp là HỢP LỆ (máy chủ Google đã nhận diện thành công)
+      nhưng đang bận tạm thời. Hệ thống cho phép lưu và thông báo cảnh báo nhẹ thay vì chặn đứng bằng lỗi đỏ.
+      
+    Trả về: (is_valid, message, is_busy)
+      - is_valid: True nếu gọi thành công hoặc gặp lỗi bận máy chủ tạm thời (key hợp lệ).
+      - message: Thông báo chi tiết.
+      - is_busy: True nếu máy chủ Google đang quá tải tạm thời.
+    """
     if not api_key or not api_key.strip():
-        return False, "API Key đang để trống. Vui lòng nhập API Key để kiểm tra."
+        return False, "API Key đang để trống. Vui lòng nhập API Key để kiểm tra.", False
     
     clean_key = api_key.strip()
-    candidate_models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     last_err = ""
 
     for model_name in candidate_models:
@@ -55,13 +67,12 @@ def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
             "contents": [
                 {
                     "parts": [
-                        {"text": "Xin chào, phản hồi ngắn gọn 1 từ: 'OK'"}
+                        {"text": "ping"}
                     ]
                 }
             ],
             "generationConfig": {
-                "maxOutputTokens": 10,
-                "temperature": 0.1
+                "maxOutputTokens": 1
             }
         }
         try:
@@ -70,24 +81,44 @@ def test_gemini_api_connection(api_key: str) -> tuple[bool, str]:
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=12) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                if data.get("candidates"):
-                    return True, f"Kết nối Gemini API thành công với mô hình '{model_name}'!"
+                if data.get("candidates") or resp.status == 200:
+                    return True, f"Kết nối Gemini API thành công với mô hình '{model_name}'!", False
         except urllib.error.HTTPError as e:
+            err_msg_text = ""
             try:
                 err_data = json.loads(e.read().decode("utf-8", errors="ignore"))
-                last_err = err_data.get("error", {}).get("message", str(e))
+                err_msg_text = err_data.get("error", {}).get("message", str(e))
             except Exception:
-                last_err = str(e)
-            if "not found" in last_err.lower() or "404" in str(e):
+                err_msg_text = str(e)
+            
+            last_err = err_msg_text
+            lower_err = err_msg_text.lower()
+            
+            # Kiểm tra trường hợp quá tải tạm thời / High Demand / 429 / 503
+            busy_indicators = [
+                "high demand", "currently experiencing high demand",
+                "resource_exhausted", "resource has been exhausted",
+                "quota", "too many requests", "temporarily unavailable", "overloaded"
+            ]
+            if e.code in (429, 503) or any(ind in lower_err for ind in busy_indicators):
+                return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+            
+            # Nếu model không tìm thấy (404), thử model tiếp theo trong danh sách candidate
+            if "not found" in lower_err or e.code == 404:
                 continue
-            return False, f"Lỗi xác thực Gemini API: {last_err}"
+            
+            # Lỗi xác thực thực sự (ví dụ: API_KEY_INVALID, 400, 403)
+            return False, f"Lỗi xác thực Gemini API ({e.code}): {err_msg_text}", False
         except Exception as e:
             last_err = str(e)
-            return False, f"Lỗi mạng hoặc kết nối tới Google API: {last_err}"
+            lower_err = str(e).lower()
+            if any(ind in lower_err for ind in ["high demand", "429", "503", "quota"]):
+                return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời, tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+            return False, f"Lỗi kết nối tới máy chủ Google API: {last_err}", False
 
-    return False, f"Không thể kết nối với các mô hình Gemini. Lỗi cuối: {last_err}"
+    return False, f"Không thể kết nối với các mô hình Gemini. Lỗi cuối: {last_err}", False
 
 
 # ==============================================================================
@@ -365,8 +396,11 @@ def admin_view():
     with tab_sys_config:
         st.subheader("🌐 Cấu Hình Nhận Diện Doanh Nghiệp & Email Gửi Đi")
         if st.session_state.get("config_save_success"):
-            st.success("Cập nhật thông tin doanh nghiệp thành công!")
+            st.success("🎉 Cập nhật thông tin doanh nghiệp và Google Gemini API Key thành công!")
             del st.session_state["config_save_success"]
+        if st.session_state.get("config_warning_msg"):
+            st.warning(f"⚠️ {st.session_state.get('config_warning_msg')}")
+            del st.session_state["config_warning_msg"]
 
         cfg = get_config()
         smtp_cfg = cfg.get("smtp_settings", {})
@@ -411,7 +445,7 @@ def admin_view():
                         🟢 Trạng thái AI: ĐÃ CẤU HÌNH HỆ THỐNG (Khóa hiện tại: <code>{masked_key}</code>)
                     </span>
                     <span style="font-size: 0.80rem; background-color: #D1FAE5; color: #047857; font-weight: 600; padding: 3px 8px; border-radius: 6px;">
-                        Mô hình: gemini-3.8-flash (Tự động sẵn sàng)
+                        Mô hình: gemini-2.5-flash (Tự động sẵn sàng)
                     </span>
                 </div>
                 """,
@@ -439,17 +473,24 @@ def admin_view():
                 value=current_saved_gemini_key,
                 type="password",
                 placeholder="Nhập hoặc dán Gemini API Key (bắt đầu bằng AIzaSy...)",
-                help="Lấy API Key miễn phí hoặc trả phí tại Google AI Studio: https://aistudio.google.com/app/apikey",
+                help="Nhập mã Google Gemini API Key để kích hoạt tính năng AI cho toàn hệ thống.",
                 key="admin_gemini_api_key_input"
+            )
+            # Dòng chú thích liên kết mở tab mới rõ ràng, click được 100%
+            st.markdown(
+                '👉 *Chưa có mã kết nối? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: #2563EB; font-weight: 600; text-decoration: underline;">Bấm vào đây để lấy Gemini API Key miễn phí tại Google AI Studio ↗</a>*',
+                unsafe_allow_html=True
             )
         with col_ai_test:
             st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
             btn_test_gemini = st.button("🧪 Kiểm Tra Kết Nối", use_container_width=True, key="btn_test_gemini_admin")
 
         if btn_test_gemini:
-            with st.spinner("Đang kết nối thử nghiệm tới máy chủ Google Gemini API..."):
-                is_valid, test_msg = test_gemini_api_connection(input_gemini_key)
-                if is_valid:
+            with st.spinner("Đang kết nối thử nghiệm tới máy chủ Google Gemini API (model gemini-2.5-flash)..."):
+                is_valid, test_msg, is_busy = test_gemini_api_connection(input_gemini_key)
+                if is_busy:
+                    st.warning(f"⚠️ {test_msg}")
+                elif is_valid:
                     st.success(f"✅ {test_msg}")
                 else:
                     st.error(f"❌ {test_msg}")
@@ -465,11 +506,31 @@ def admin_view():
                 "app_password": cfg_app_pwd.strip(),
                 "use_tls": True
             }
-            cfg["gemini_api_key"] = input_gemini_key.strip()
-            save_config(cfg)
-            st.session_state["config_save_success"] = True
-            st.success("🎉 Đã lưu cấu hình doanh nghiệp và Google Gemini API Key thành công!")
-            st.rerun()
+            
+            clean_gemini_key = input_gemini_key.strip()
+            # Nếu Admin nhập key mới khác với key đã lưu trước đó, thực hiện kiểm tra ping nhẹ
+            if clean_gemini_key and clean_gemini_key != current_saved_gemini_key:
+                with st.spinner("Đang xác thực Google Gemini API Key..."):
+                    is_valid, test_msg, is_busy = test_gemini_api_connection(clean_gemini_key)
+                
+                if is_busy:
+                    # Key hợp lệ về mặt xác thực nhưng máy chủ Google đang quá tải tạm thời
+                    cfg["gemini_api_key"] = clean_gemini_key
+                    save_config(cfg)
+                    st.session_state["config_warning_msg"] = "Đã lưu API Key thành công! (Máy chủ Gemini hiện đang bận tạm thời, tính năng AI sẽ hoạt động bình thường sau ít phút)"
+                    st.rerun()
+                elif is_valid:
+                    cfg["gemini_api_key"] = clean_gemini_key
+                    save_config(cfg)
+                    st.session_state["config_save_success"] = True
+                    st.rerun()
+                else:
+                    st.error(f"❌ Không thể lưu API Key: {test_msg}")
+            else:
+                cfg["gemini_api_key"] = clean_gemini_key
+                save_config(cfg)
+                st.session_state["config_save_success"] = True
+                st.rerun()
 
     # --------------------------------------------------------------------------
     # TAB 4: QUẢN TRỊ GOOGLE DRIVE & DUNG LƯỢNG LƯU TRỮ
@@ -515,6 +576,7 @@ def admin_view():
                 else:
                     st.error(f"❌ Đồng bộ thất bại: {sync_res.get('error', 'Lỗi không xác định')}")
 
+        # Lấy thông tin dung lượng
         quota_data = get_drive_storage_quota()
         stats_data = get_drive_contracts_storage_stats()
 
@@ -530,8 +592,10 @@ def admin_view():
             with col_m4:
                 st.metric("📊 Tỷ Lệ Sử Dụng", f"{pct:.1f}%")
 
+            # Thanh tiến trình
             st.progress(min(pct / 100.0, 1.0))
 
+            # Thông tin tài khoản và thư mục hồ sơ
             st.markdown(
                 f"""
                 <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-size: 0.85rem; color: #475569;">
@@ -545,6 +609,7 @@ def admin_view():
         else:
             st.info("ℹ️ Google Drive chưa được kết nối hoặc chưa cấu hình Service Account. Hãy thiết lập cấu hình bên dưới để kích hoạt Dashboard dung lượng.")
 
+        # Thống kê hồ sơ hợp đồng
         st.markdown("##### 📁 Thống Kê Tài Liệu Hợp Đồng Hệ Thống")
         col_s1, col_s2, col_s3 = st.columns(3)
         with col_s1:
@@ -573,6 +638,7 @@ def admin_view():
         curr_root_id = drive_cfg.get("root_folder_id", "")
         curr_enabled = drive_cfg.get("enabled", False)
 
+        # Hiển thị trạng thái kết nối
         sa_parsed = parse_service_account_data(curr_sa_json)
         if sa_parsed:
             st.success(f"🟢 **Trạng thái Drive:** Đã có Service Account Key cho `client_email`: `{sa_parsed.get('client_email')}`")
@@ -588,6 +654,7 @@ def admin_view():
                 help="Tải tệp JSON từ Google Cloud Console -> IAM & Admin -> Service Accounts -> Keys."
             )
             
+            # Nếu người dùng upload file, đọc nội dung
             loaded_json_content = curr_sa_json
             if uploaded_sa_file is not None:
                 try:
