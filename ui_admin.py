@@ -42,83 +42,153 @@ from drive_utils import (
 # ==============================================================================
 def test_gemini_api_connection(api_key: str) -> tuple[bool, str, bool]:
     """
-    Kiểm tra tính hợp lệ của Google Gemini API Key thông qua REST API siêu nhẹ.
-    - Model ping test: gemini-2.5-flash (tránh nghẽn hạn ngạch so với các bản Pro hay model cũ).
-    - Nội dung prompt: 'ping' với maxOutputTokens: 1 để tiêu tốn ít tài nguyên nhất, tránh bị từ chối do quá tải.
-    - Cơ chế bắt lỗi thông minh (Graceful Handling): Nếu gặp lỗi high demand / 429 / 503,
-      hệ thống xác nhận API Key về mặt cú pháp là HỢP LỆ (máy chủ Google đã nhận diện thành công)
-      nhưng đang bận tạm thời. Hệ thống cho phép lưu và thông báo cảnh báo nhẹ thay vì chặn đứng bằng lỗi đỏ.
-      
+    Kiểm tra tính hợp lệ của Google Gemini API Key thông qua cơ chế động chuẩn của Google Generative AI:
+    1. Truy vấn danh mục mô hình (list_models / GET v1beta/models) thay vì gán cứng tên model cố định.
+    2. Lọc các mô hình hỗ trợ phương thức 'generateContent', ưu tiên các mô hình dòng Flash (2.5, 2.0, 1.5).
+    3. Hỗ trợ song song cả SDK google.generativeai (nếu đã cài đặt) lẫn REST API bằng thư viện urllib nguyên bản.
+    4. Bắt chính xác mã lỗi quá tải/hạn ngạch (429, 503, high demand, resource_exhausted, quota) để ghi nhận
+       API Key là HỢP LỆ (máy chủ Google đã nhận diện thành công) và thông báo thân thiện thay vì chặn bằng lỗi đỏ.
+       
     Trả về: (is_valid, message, is_busy)
-      - is_valid: True nếu gọi thành công hoặc gặp lỗi bận máy chủ tạm thời (key hợp lệ).
-      - message: Thông báo chi tiết.
-      - is_busy: True nếu máy chủ Google đang quá tải tạm thời.
+      - is_valid: True nếu API key hợp lệ hoặc máy chủ bận tạm thời.
+      - message: Nội dung thông báo phản hồi chi tiết.
+      - is_busy: True nếu máy chủ quá tải/bận tạm thời.
     """
     if not api_key or not api_key.strip():
         return False, "API Key đang để trống. Vui lòng nhập API Key để kiểm tra.", False
-    
+
     clean_key = api_key.strip()
-    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-    last_err = ""
 
-    for model_name in candidate_models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": "ping"}
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "maxOutputTokens": 1
-            }
-        }
+    def model_priority(m_name: str) -> int:
+        name_lower = m_name.lower()
+        if "2.5-flash" in name_lower:
+            return 0
+        if "2.0-flash" in name_lower:
+            return 1
+        if "1.5-flash" in name_lower:
+            return 2
+        if "flash" in name_lower:
+            return 3
+        return 4
+
+    busy_indicators = [
+        "high demand", "currently experiencing high demand",
+        "resource_exhausted", "resource has been exhausted",
+        "quota", "too many requests", "temporarily unavailable", "overloaded"
+    ]
+
+    # --- CÁCH 1: KIỂM TRA ĐỘNG QUA SDK GOOGLE.GENERATIVEAI NẾU CÓ ---
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=clean_key)
+        
+        valid_sdk_models = []
+        for m in genai.list_models():
+            methods = getattr(m, "supported_generation_methods", [])
+            if "generateContent" in methods:
+                valid_sdk_models.append(m.name)
+                
+        if not valid_sdk_models:
+            return False, "API Key hợp lệ nhưng không tìm thấy mô hình nào hỗ trợ tạo văn bản (generateContent).", False
+            
+        valid_sdk_models.sort(key=model_priority)
+        chosen_model_full = valid_sdk_models[0]
+        chosen_display_name = chosen_model_full.replace("models/", "")
+        
+        # Thử ping siêu nhẹ bằng model đã tìm được
         try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=12) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                if data.get("candidates") or resp.status == 200:
-                    return True, f"Kết nối Gemini API thành công với mô hình '{model_name}'!", False
-        except urllib.error.HTTPError as e:
-            err_msg_text = ""
-            try:
-                err_data = json.loads(e.read().decode("utf-8", errors="ignore"))
-                err_msg_text = err_data.get("error", {}).get("message", str(e))
-            except Exception:
-                err_msg_text = str(e)
-            
-            last_err = err_msg_text
-            lower_err = err_msg_text.lower()
-            
-            # Kiểm tra trường hợp quá tải tạm thời / High Demand / 429 / 503
-            busy_indicators = [
-                "high demand", "currently experiencing high demand",
-                "resource_exhausted", "resource has been exhausted",
-                "quota", "too many requests", "temporarily unavailable", "overloaded"
-            ]
-            if e.code in (429, 503) or any(ind in lower_err for ind in busy_indicators):
-                return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ hoạt động bình thường sau ít phút.", True
-            
-            # Nếu model không tìm thấy (404), thử model tiếp theo trong danh sách candidate
-            if "not found" in lower_err or e.code == 404:
-                continue
-            
-            # Lỗi xác thực thực sự (ví dụ: API_KEY_INVALID, 400, 403)
-            return False, f"Lỗi xác thực Gemini API ({e.code}): {err_msg_text}", False
-        except Exception as e:
-            last_err = str(e)
-            lower_err = str(e).lower()
-            if any(ind in lower_err for ind in ["high demand", "429", "503", "quota"]):
-                return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời, tính năng AI sẽ hoạt động bình thường sau ít phút.", True
-            return False, f"Lỗi kết nối tới máy chủ Google API: {last_err}", False
+            model_inst = genai.GenerativeModel(chosen_model_full)
+            _ = model_inst.generate_content("ping", generation_config={"max_output_tokens": 1})
+            return True, f"Kết nối Gemini API thành công! Mô hình đang hoạt động: '{chosen_display_name}'.", False
+        except Exception as ping_err:
+            p_err_str = str(ping_err).lower()
+            if any(ind in p_err_str for ind in busy_indicators) or "429" in p_err_str or "503" in p_err_str:
+                return True, f"API Key hợp lệ! Đã xác thực mô hình '{chosen_display_name}'. Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ sẵn sàng sau ít phút.", True
+            # Nếu ping có lỗi nghẽn nhưng list_models đã thành công (API key đã được Google chứng thực)
+            return True, f"API Key hợp lệ! Đã xác thực thành công danh mục mô hình Gemini (Mô hình khả dụng: '{chosen_display_name}').", False
 
-    return False, f"Không thể kết nối với các mô hình Gemini. Lỗi cuối: {last_err}", False
+    except ImportError:
+        # Nếu chưa cài google-generativeai, chuyển sang CÁCH 2: REST API chuẩn
+        pass
+    except Exception as sdk_err:
+        sdk_err_str = str(sdk_err).lower()
+        if any(ind in sdk_err_str for ind in busy_indicators) or "429" in sdk_err_str or "503" in sdk_err_str:
+            return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+        if any(w in sdk_err_str for w in ["api key not valid", "api_key_invalid", "invalid_argument", "unauthorized", "permission"]):
+            return False, f"API Key không hợp lệ hoặc bị từ chối truy cập: {sdk_err}", False
+
+    # --- CÁCH 2: TRUY VẤN DANH MỤC MÔ HÌNH ĐỘNG QUA REST API CHUẨN (GET v1beta/models) ---
+    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={clean_key}"
+    try:
+        req = urllib.request.Request(
+            list_url,
+            headers={"User-Agent": "StreamlitAdminApp/1.0", "Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models_list = data.get("models", [])
+            
+            supported_models = [
+                m.get("name", "") for m in models_list
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
+            
+            if not supported_models:
+                return False, "API Key hợp lệ nhưng không tìm thấy mô hình nào hỗ trợ tạo văn bản (generateContent).", False
+                
+            supported_models.sort(key=model_priority)
+            best_model_full = supported_models[0]
+            best_display = best_model_full.replace("models/", "")
+            
+            # Ping thử nghiệm siêu nhẹ với chính mô hình đã được xác thực từ danh mục Google
+            ping_url = f"https://generativelanguage.googleapis.com/v1beta/{best_model_full}:generateContent?key={clean_key}"
+            payload = {
+                "contents": [{"parts": [{"text": "ping"}]}],
+                "generationConfig": {"maxOutputTokens": 1}
+            }
+            try:
+                ping_req = urllib.request.Request(
+                    ping_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(ping_req, timeout=10) as ping_resp:
+                    return True, f"Kết nối Gemini API thành công! Mô hình đang hoạt động: '{best_display}'.", False
+            except urllib.error.HTTPError as ping_e:
+                p_msg = ""
+                try:
+                    p_data = json.loads(ping_e.read().decode("utf-8", errors="ignore"))
+                    p_msg = p_data.get("error", {}).get("message", str(ping_e))
+                except Exception:
+                    p_msg = str(ping_e)
+                    
+                p_lower = p_msg.lower()
+                if ping_e.code in (429, 503) or any(ind in p_lower for ind in busy_indicators):
+                    return True, f"API Key hợp lệ! Đã xác thực mô hình '{best_display}'. Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+                
+                # Nếu API models list đã trả về 200 OK thì API key chắc chắn hợp lệ
+                return True, f"API Key hợp lệ! Đã xác thực thành công qua Google API (Mô hình khả dụng: '{best_display}').", False
+            except Exception:
+                return True, f"API Key hợp lệ! Đã xác thực thành công qua Google API (Mô hình khả dụng: '{best_display}').", False
+
+    except urllib.error.HTTPError as e:
+        err_msg_text = ""
+        try:
+            err_data = json.loads(e.read().decode("utf-8", errors="ignore"))
+            err_msg_text = err_data.get("error", {}).get("message", str(e))
+        except Exception:
+            err_msg_text = str(e)
+            
+        lower_err = err_msg_text.lower()
+        if e.code in (429, 503) or any(ind in lower_err for ind in busy_indicators):
+            return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời (High demand/429/503), tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+            
+        return False, f"Lỗi xác thực Gemini API ({e.code}): {err_msg_text}", False
+    except Exception as e:
+        err_txt = str(e)
+        if any(ind in err_txt.lower() for ind in busy_indicators):
+            return True, "API Key hợp lệ! Máy chủ Gemini hiện đang bận tạm thời, tính năng AI sẽ hoạt động bình thường sau ít phút.", True
+        return False, f"Lỗi kết nối tới máy chủ Google API: {err_txt}", False
 
 
 # ==============================================================================
@@ -445,7 +515,7 @@ def admin_view():
                         🟢 Trạng thái AI: ĐÃ CẤU HÌNH HỆ THỐNG (Khóa hiện tại: <code>{masked_key}</code>)
                     </span>
                     <span style="font-size: 0.80rem; background-color: #D1FAE5; color: #047857; font-weight: 600; padding: 3px 8px; border-radius: 6px;">
-                        Mô hình: gemini-2.5-flash (Tự động sẵn sàng)
+                        Mô hình: Gemini Flash (Định tuyến động sẵn sàng)
                     </span>
                 </div>
                 """,
@@ -486,7 +556,7 @@ def admin_view():
             btn_test_gemini = st.button("🧪 Kiểm Tra Kết Nối", use_container_width=True, key="btn_test_gemini_admin")
 
         if btn_test_gemini:
-            with st.spinner("Đang kết nối thử nghiệm tới máy chủ Google Gemini API (model gemini-2.5-flash)..."):
+            with st.spinner("Đang xác thực và kiểm tra kết nối Google Gemini API..."):
                 is_valid, test_msg, is_busy = test_gemini_api_connection(input_gemini_key)
                 if is_busy:
                     st.warning(f"⚠️ {test_msg}")
